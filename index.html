@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pradraksha Groups - Enterprise Operations Hub</title>
+    <meta name="description" content="Operational dashboard for Pradraksha Groups. Manage client accounts, compile invoices, generate Master Service Agreements, and track payments.">
+    <link rel="stylesheet" href="styles.css">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- html2pdf.js bundle -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- qrcode.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Supabase JS Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-icon">
+                    <i data-lucide="layers"></i>
+                </div>
+                <div class="brand-name">Pradraksha</div>
+            </div>
+            
+            <ul class="nav-links">
+                <li class="nav-item active" id="nav-dashboard">
+                    <a href="#dashboard">
+                        <i data-lucide="layout-dashboard"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item" id="nav-clients">
+                    <a href="#clients">
+                        <i data-lucide="users"></i>
+                        <span>Clients</span>
+                    </a>
+                </li>
+
+                <li class="nav-item" id="nav-agreements">
+                    <a href="#agreements">
+                        <i data-lucide="file-text"></i>
+                        <span>Agreements</span>
+                    </a>
+                </li>
+                <li class="nav-item" id="nav-invoices">
+                    <a href="#invoices">
+                        <i data-lucide="receipt"></i>
+                        <span>Invoices</span>
+                    </a>
+                </li>
+                <li class="nav-item" id="nav-payments">
+                    <a href="#payments">
+                        <i data-lucide="wallet"></i>
+                        <span>Payment Ledger</span>
+                    </a>
+                </li>
+                <li class="nav-item" id="nav-qr-generator">
+                    <a href="#qr-generator">
+                        <i data-lucide="qr-code"></i>
+                        <span>Menu QR Tool</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="sidebar-footer">
+                <div class="user-profile mb-2">
+                    <div class="user-avatar">PG</div>
+                    <div class="user-info">
+                        <span class="user-name">Pradraksha Operations</span>
+                        <span class="user-role">Finance Controller</span>
+                    </div>
+                </div>
+                <div class="flex-row mt-4">
+                    <button class="btn btn-secondary w-full" id="btn-open-backup" style="font-size: 0.8rem; padding: 0.5rem;">
+                        <i data-lucide="database" style="width: 14px; height: 14px;"></i>
+                        Backup & Sync
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Viewport -->
+        <main class="main-content">
+            <!-- HEADER -->
+            <header class="content-header">
+                <div class="header-title">
+                    <h1 id="page-title">Operational Overview</h1>
+                    <p id="page-subtitle">Real-time statistics and workflow operations.</p>
+                </div>
+                <div class="header-actions" style="display: flex; gap: 0.5rem; align-items: center;">
+                    <span id="db-status-badge" class="badge" style="padding: 0.5rem 1rem; display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.8rem; font-weight: 600; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2);">
+                        <i data-lucide="database" style="width: 14px; height: 14px;"></i>
+                        <span>DB: Local</span>
+                    </span>
+                    <span id="current-date-badge" class="badge badge-type" style="padding: 0.5rem 1rem;">June 8, 2026</span>
+                    <button class="btn btn-primary" id="btn-header-action">
+                        <i data-lucide="plus"></i>
+                        <span>Add New Client</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- SECTION: DASHBOARD -->
+            <section id="section-dashboard" class="app-section active-section">
+                <!-- Quick Command Panel -->
+                <div class="glass-panel" style="margin-bottom: 2rem; padding: 1.25rem;">
+                    <h3 style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.75px; color: var(--text-muted); margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Quick Command Center</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1rem;">
+                        <button class="btn btn-secondary flex-center" onclick="quickNavigate('clients-add')" style="padding: 1rem; flex-direction: column; gap: 0.5rem; text-align: center; height: auto;">
+                            <i data-lucide="user-plus" style="width: 24px; height: 24px; color: #60a5fa;"></i>
+                            <span style="font-size: 0.85rem; font-weight: 600;">Add Client Partner</span>
+                        </button>
+
+                        <button class="btn btn-secondary flex-center" onclick="quickNavigate('agreements')" style="padding: 1rem; flex-direction: column; gap: 0.5rem; text-align: center; height: auto;">
+                            <i data-lucide="file-text" style="width: 24px; height: 24px; color: #a78bfa;"></i>
+                            <span style="font-size: 0.85rem; font-weight: 600;">Draft Agreement</span>
+                        </button>
+                        <button class="btn btn-secondary flex-center" onclick="quickNavigate('invoices')" style="padding: 1rem; flex-direction: column; gap: 0.5rem; text-align: center; height: auto;">
+                            <i data-lucide="receipt" style="width: 24px; height: 24px; color: #f43f5e;"></i>
+                            <span style="font-size: 0.85rem; font-weight: 600;">Draft Invoice</span>
+                        </button>
+                        <button class="btn btn-secondary flex-center" onclick="quickNavigate('payments-log')" style="padding: 1rem; flex-direction: column; gap: 0.5rem; text-align: center; height: auto;">
+                            <i data-lucide="wallet" style="width: 24px; height: 24px; color: #34d399;"></i>
+                            <span style="font-size: 0.85rem; font-weight: 600;">Record Payout</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Metrics -->
+                <div class="dashboard-grid">
+                    <div class="glass-panel metric-card purple">
+                        <div class="metric-content">
+                            <div class="metric-label">Total Portfolio Pipeline</div>
+                            <div class="metric-value" id="val-total-pipeline">₹0</div>
+                            <div class="metric-subtext">Cumulative contract parameters</div>
+                        </div>
+                        <div class="metric-icon"><i data-lucide="briefcase"></i></div>
+                    </div>
+                    <div class="glass-panel metric-card green">
+                        <div class="metric-content">
+                            <div class="metric-label">Revenue Collected</div>
+                            <div class="metric-value" id="val-total-collected">₹0</div>
+                            <div class="metric-subtext" id="val-percent-collected">0% of pipeline</div>
+                        </div>
+                        <div class="metric-icon"><i data-lucide="check-circle"></i></div>
+                    </div>
+                    <div class="glass-panel metric-card amber">
+                        <div class="metric-content">
+                            <div class="metric-label">Pending Receivables</div>
+                            <div class="metric-value" id="val-total-outstanding">₹0</div>
+                            <div class="metric-subtext" id="val-pending-count">0 pending payouts</div>
+                        </div>
+                        <div class="metric-icon"><i data-lucide="clock"></i></div>
+                    </div>
+                    <div class="glass-panel metric-card blue">
+                        <div class="metric-content">
+                            <div class="metric-label">Accounts Directory</div>
+                            <div class="metric-value" id="val-client-count">0</div>
+                            <div class="metric-subtext">Registered corporate partners</div>
+                        </div>
+                        <div class="metric-icon"><i data-lucide="users"></i></div>
+                    </div>
+                </div>
+
+                <!-- System Activity Log -->
+                <div class="glass-panel" style="margin-bottom: 2rem;">
+                    <div class="chart-header">
+                        <div class="chart-title">System Log / Activity Feed</div>
+                    </div>
+                    <div class="recent-activity-list" id="activity-log-container">
+                        <div class="activity-item">
+                            <div class="activity-badge doc"><i data-lucide="info"></i></div>
+                            <div class="activity-details">
+                                <div class="activity-text">Operations module active. Ready to manage corporate assets.</div>
+                                <div class="activity-time">Just now</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION: CLIENTS -->
+            <section id="section-clients" class="app-section">
+                <div class="search-filter-bar">
+                    <div class="search-box input-with-icon">
+                        <i data-lucide="search"></i>
+                        <input type="text" id="client-search" placeholder="Search accounts, businesses or focuses...">
+                    </div>
+                    <div class="filter-box">
+                        <select id="client-filter-type">
+                            <option value="ALL">All Portfolio Sectors</option>
+                            <option value="Custom Software">Custom Software / ERP</option>
+                            <option value="Web Development">Web & Mobile Apps</option>
+                            <option value="Branding">Branding & Creative</option>
+                            <option value="Hosting Setup">IT & Cloud Infrastructure</option>
+                            <option value="Consulting">Corporate Consulting</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="clients-grid" id="clients-list-container">
+                    <!-- Client cards dynamically injected here -->
+                </div>
+            </section>
+
+
+
+            <!-- SECTION: AGREEMENTS -->
+            <section id="section-agreements" class="app-section">
+                <div class="generator-split">
+                    <!-- Left Form Panel -->
+                    <div class="glass-panel">
+                        <h2 class="mb-2" style="font-size: 1.25rem;">Contract Scope</h2>
+                        <form id="agreement-form">
+                            <!-- Service Provider Sub-Section -->
+                            <details class="form-details" style="margin-bottom: 1.25rem;">
+                                <summary>
+                                    <span style="font-weight: 700; color: #60a5fa;">Service Provider (Pradraksha Group)</span>
+                                    <span style="font-size: 0.75rem; font-weight: normal; color: var(--text-muted); text-decoration: underline;">Click to edit defaults</span>
+                                </summary>
+                                <div class="form-details-content">
+                                    <div class="form-group" style="margin-top: 1rem;">
+                                        <label for="agree-sp-address">Office Address</label>
+                                        <input type="text" id="agree-sp-address" value="Pradraksha Towers, Sector 4, HSR Layout, Bangalore, Karnataka - 560102" required>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="agree-sp-phone">Phone Number</label>
+                                            <input type="text" id="agree-sp-phone" value="+91 98765 43210" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="agree-sp-email">Email Address</label>
+                                            <input type="email" id="agree-sp-email" value="business@pradraksha.com" required>
+                                        </div>
+                                    </div>
+                                    <div class="form-group" style="margin-top: 0.5rem;">
+                                        <label for="agree-sp-designation">Signatory Designation</label>
+                                        <input type="text" id="agree-sp-designation" value="Director" required>
+                                    </div>
+                                </div>
+                            </details>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="agree-client-select">Select Corporate Client</label>
+                                    <select id="agree-client-select" required>
+                                        <option value="">-- Choose Client --</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="agree-client-designation">Client Designation / Role</label>
+                                    <input type="text" id="agree-client-designation" value="Authorized Signatory" placeholder="e.g. Managing Director / Proprietor" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="agree-project-name">Agreement Title / Project Subject</label>
+                                <input type="text" id="agree-project-name" placeholder="e.g. Custom Website Development & Deployment" required>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="agree-project-type">Project Type</label>
+                                    <select id="agree-project-type" required>
+                                        <option value="Website">Website</option>
+                                        <option value="QR Menu Website">QR Menu Website</option>
+                                        <option value="Restaurant Website">Restaurant Website</option>
+                                        <option value="Business Website" selected>Business Website</option>
+                                        <option value="E-Commerce Website">E-Commerce Website</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" id="agree-project-type-other-group" style="display: none;">
+                                    <label for="agree-project-type-other">Specify Other Type</label>
+                                    <input type="text" id="agree-project-type-other" placeholder="e.g. Mobile App">
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="agree-cost">Total Project Cost (₹)</label>
+                                    <input type="number" id="agree-cost" min="0" placeholder="e.g. 150000" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="agree-advance">Advance Payment (₹)</label>
+                                    <input type="number" id="agree-advance" min="0" placeholder="e.g. 50000" required>
+                                </div>
+                            </div>
+
+                            <div class="form-row-3">
+                                <div class="form-group">
+                                    <label for="agree-date">Agreement Date</label>
+                                    <input type="date" id="agree-date" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="agree-start-date">Start Date</label>
+                                    <input type="date" id="agree-start-date" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="agree-delivery-date">Estimated Delivery</label>
+                                    <input type="date" id="agree-delivery-date" required>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600; cursor: pointer; user-select: none; margin-bottom: 0.5rem;">
+                                        <input type="checkbox" id="agree-revisions-toggle" style="width: 16px; height: 16px; cursor: pointer;" checked>
+                                        <span>Limit Included Revisions</span>
+                                    </label>
+                                    <div id="agree-revisions-fields">
+                                        <input type="number" id="agree-revisions" min="0" value="3" required>
+                                    </div>
+                                </div>
+                                <div class="form-group" style="display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: 0.5rem;">
+                                    <label style="display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 600; cursor: pointer; user-select: none;">
+                                        <input type="checkbox" id="agree-maintenance-toggle" style="width: 16px; height: 16px; cursor: pointer;">
+                                        <span>Include Maintenance Package</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div id="agree-maintenance-fields" style="display: none; margin-bottom: 1.25rem; border: 1px dashed var(--border-color); padding: 1rem; border-radius: var(--radius-sm);">
+                                <div class="form-row" style="gap: 0.5rem; margin-bottom: 0;">
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label for="agree-maintenance">Maintenance Fee (₹)</label>
+                                        <input type="number" id="agree-maintenance" min="0" value="0">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label for="agree-maintenance-period">Billing Period</label>
+                                        <select id="agree-maintenance-period">
+                                            <option value="per month" selected>Per Month</option>
+                                            <option value="per year">Per Year</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="agree-scope">Project Requirements & Deliverables</label>
+                                <textarea id="agree-scope" placeholder="List key functionality, design scope, platform integrations, etc." required></textarea>
+                            </div>
+
+                            <div class="flex-end mt-4" style="display: flex; gap: 0.75rem;">
+                                <button type="button" class="btn btn-secondary" id="btn-agree-reset">Reset</button>
+                                <button type="submit" class="btn btn-primary" id="btn-agree-generate">
+                                    <i data-lucide="file-check"></i> Compile Agreement
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Right Live Preview Panel -->
+                    <div class="preview-container">
+                        <div class="preview-header">
+                            <span>Master Services Agreement (MSA) Preview</span>
+                            <button class="btn btn-outline" id="btn-agree-export" disabled>
+                                <i data-lucide="download"></i> Export PDF
+                            </button>
+                        </div>
+                        <div class="preview-scroll" id="agree-pdf-viewport">
+                            <div style="padding: 2.5rem; text-align: center; color: var(--text-muted);">
+                                <i data-lucide="eye" style="width: 48px; height: 48px; stroke-width: 1; margin-bottom: 1rem;"></i>
+                                <p>Fill in parameters to compile draft of corporate agreement.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION: INVOICES -->
+            <section id="section-invoices" class="app-section">
+                <div class="generator-split">
+                    <!-- Left Form Panel -->
+                    <div class="glass-panel">
+                        <h2 class="mb-2" style="font-size: 1.25rem;">Billing Details</h2>
+                        <form id="invoice-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="invoice-num">Invoice Serial Number</label>
+                                    <input type="text" id="invoice-num" placeholder="e.g. PR-2026-001" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="invoice-date">Invoice Date</label>
+                                    <input type="date" id="invoice-date" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="invoice-client-select">Select Corporate Client</label>
+                                <select id="invoice-client-select" required>
+                                    <option value="">-- Choose Client --</option>
+                                </select>
+                            </div>
+
+                            <div style="margin: 1.5rem 0 1rem 0; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                    <label style="font-weight: 700;">Line Items</label>
+                                    <button type="button" class="btn btn-secondary" id="btn-invoice-add-item" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">
+                                        <i data-lucide="plus" style="width: 14px; height: 14px;"></i> Add Item
+                                    </button>
+                                </div>
+                                
+                                <div class="table-container">
+                                    <table class="dynamic-items-table">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 65%;">Service Description</th>
+                                                <th style="width: 25%; text-align: right;">Rate (₹)</th>
+                                                <th style="width: 10%; text-align: center;"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="invoice-items-tbody">
+                                            <!-- Interactive lines injected here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="invoice-paid">Prepaid / Advance Deduction (₹)</label>
+                                    <input type="number" id="invoice-paid" min="0" placeholder="e.g. 50000" value="0">
+                                </div>
+                                <div class="form-group">
+                                    <label for="invoice-due-date">Payment Due Date</label>
+                                    <input type="date" id="invoice-due-date">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="invoice-notes">Terms of Settlement & Accounts coordinates</label>
+                                <textarea id="invoice-notes" placeholder="UPI IDs, Corporate Accounts numbers, or terms on interest charged for delayed payments."></textarea>
+                            </div>
+
+                            <div class="flex-end mt-4" style="display: flex; gap: 0.75rem;">
+                                <button type="button" class="btn btn-secondary" id="btn-invoice-reset">Reset</button>
+                                <button type="submit" class="btn btn-primary" id="btn-invoice-generate">
+                                    <i data-lucide="receipt"></i> Compile Corporate Invoice
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Right Live Preview Panel -->
+                    <div class="preview-container">
+                        <div class="preview-header">
+                            <span>Invoice Preview</span>
+                            <button class="btn btn-outline" id="btn-invoice-export" disabled>
+                                <i data-lucide="download"></i> Export PDF
+                            </button>
+                        </div>
+                        <div class="preview-scroll" id="invoice-pdf-viewport">
+                            <div style="padding: 2.5rem; text-align: center; color: var(--text-muted);">
+                                <i data-lucide="eye" style="width: 48px; height: 48px; stroke-width: 1; margin-bottom: 1rem;"></i>
+                                <p>Set line costs and select client to display invoice draft.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION: PAYMENT LEDGER -->
+            <section id="section-payments" class="app-section">
+                <!-- Balance Tracker Widgets -->
+                <div class="dashboard-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 2rem;">
+                    <div class="glass-panel metric-card purple">
+                        <div class="metric-content">
+                            <div class="metric-label">Total Invoiced</div>
+                            <div class="metric-value" id="ledger-total-billed">₹0</div>
+                            <div class="metric-subtext">Sum of compiled invoices</div>
+                        </div>
+                    </div>
+                    <div class="glass-panel metric-card green">
+                        <div class="metric-content">
+                            <div class="metric-label">Cash Collected</div>
+                            <div class="metric-value" id="ledger-total-collected">₹0</div>
+                            <div class="metric-subtext" id="ledger-percent-collected">0% collection rate</div>
+                        </div>
+                    </div>
+                    <div class="glass-panel metric-card amber">
+                        <div class="metric-content">
+                            <div class="metric-label">Outstanding Balances</div>
+                            <div class="metric-value" id="ledger-total-pending">₹0</div>
+                            <div class="metric-subtext">Net pending portfolio invoices</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel">
+                    <div class="chart-header">
+                        <div class="chart-title">Payment Transaction History</div>
+                        <button class="btn btn-primary" id="btn-open-payment-modal">
+                            <i data-lucide="plus"></i> Record Payment
+                        </button>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Client / Account</th>
+                                    <th>Invoice Ref</th>
+                                    <th>Transaction Type</th>
+                                    <th>Method</th>
+                                    <th>Payment Notes</th>
+                                    <th style="text-align: right;">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ledger-tbody">
+                                <!-- Transaction log items injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION: QR CODE GENERATOR -->
+            <section id="section-qr-generator" class="app-section">
+                <div class="glass-panel">
+                    <div class="qr-customizer-grid">
+                        <!-- Left Controls -->
+                        <div>
+                            <h2 class="mb-2" style="font-size: 1.25rem; margin-bottom: 1rem;">QR Code Configuration</h2>
+                            <div class="form-group">
+                                <label for="qr-client-select">Select Client / Brand</label>
+                                <select id="qr-client-select">
+                                    <option value="">-- Choose Client (Auto fills brand) --</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="qr-text">Redirect URL</label>
+                                <div class="input-with-icon">
+                                    <i data-lucide="link"></i>
+                                    <input type="text" id="qr-text" placeholder="https://example.com" value="https://example.com">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="qr-brand-title">Client Brand Title</label>
+                                    <input type="text" id="qr-brand-title" placeholder="e.g. Pradraksha Tech" value="Pradraksha Tech">
+                                </div>
+                                <div class="form-group">
+                                    <label for="qr-brand-sub">Instruction Caption</label>
+                                    <input type="text" id="qr-brand-sub" placeholder="e.g. Scan to Visit Website" value="Scan to Visit Website">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="qr-color-dark">QR Code Foreground Color</label>
+                                    <input type="color" id="qr-color-dark" value="#1e3a8a">
+                                </div>
+                                <div class="form-group">
+                                    <label for="qr-color-light">Background Color</label>
+                                    <input type="color" id="qr-color-light" value="#ffffff">
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 1rem;">
+                                <label style="display: block; margin-bottom: 0.5rem;">Quick Color Presets</label>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <button type="button" class="btn btn-secondary" style="flex: 1; font-size: 0.8rem; padding: 0.4rem;" onclick="applyQRPreset('#1e3a8a', '#ffffff')">
+                                        🔵 Sapphire
+                                    </button>
+                                    <button type="button" class="btn btn-secondary" style="flex: 1; font-size: 0.8rem; padding: 0.4rem;" onclick="applyQRPreset('#10b981', '#ffffff')">
+                                        🟢 Emerald
+                                    </button>
+                                    <button type="button" class="btn btn-secondary" style="flex: 1; font-size: 0.8rem; padding: 0.4rem;" onclick="applyQRPreset('#1e293b', '#f8fafc')">
+                                        ⚫ Dark
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mt-4" style="display: flex; gap: 0.75rem;">
+                                <button type="button" class="btn btn-secondary w-full" id="btn-qr-download-png">
+                                    <i data-lucide="image"></i> Download PNG
+                                </button>
+                                <button type="button" class="btn btn-primary w-full" id="btn-qr-download-pdf">
+                                    <i data-lucide="printer"></i> Download Table Tent PDF
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Right Live Canvas Render -->
+                        <div class="qr-preview-box text-center">
+                            <span class="mb-2" style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">Table Tent Card Preview</span>
+                            
+                            <!-- Table Tent Card Mockup Container -->
+                            <div class="qr-canvas-container" id="qr-tent-mockup">
+                                <div class="print-qr-tent" style="border: none; padding: 20px; box-shadow: none;">
+                                    <div class="print-qr-logo" id="mockup-qr-logo">🌐</div>
+                                    <div class="print-qr-heading" id="mockup-brand-title">Pradraksha Tech</div>
+                                    <div class="print-qr-sub" id="mockup-brand-sub">Scan to Visit Website</div>
+                                    
+                                    <div class="print-qr-img-wrap" style="background: white; border: none; padding: 5px; margin-bottom: 20px;">
+                                        <div id="qrcode-canvas-target" style="display: inline-block;"></div>
+                                    </div>
+                                    
+                                    <div class="print-qr-footer">
+                                        Powered by <b>Pradraksha Groups</b><br>
+                                        Quality Assurance & Compliance
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODAL: REGISTER / EDIT CLIENT -->
+    <div class="modal-overlay" id="modal-client">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('modal-client')">&times;</button>
+            <h3 class="modal-title" id="modal-client-title">Register Account Partner</h3>
+            <form id="client-form">
+                <input type="hidden" id="client-id">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="client-name">Contact Representative</label>
+                        <input type="text" id="client-name" placeholder="John Doe" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="client-business">Corporate Business Name</label>
+                        <input type="text" id="client-business" placeholder="Acme Corporation Ltd" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="client-phone">Phone / WhatsApp Number</label>
+                        <input type="tel" id="client-phone" placeholder="98765 43210" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="client-email">Email Address</label>
+                        <input type="email" id="client-email" placeholder="contact@acmecorp.com" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="client-address">Billing Address</label>
+                    <textarea id="client-address" placeholder="Unit 4B, Corporate Park, MG Road, Bangalore 560001" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="client-project-type">Primary Portfolio Focus</label>
+                    <select id="client-project-type" required>
+                        <option value="Custom Software" selected>Custom Software & ERP</option>
+                        <option value="Web Development">Web & Mobile Apps</option>
+                        <option value="Hosting Setup">IT & Cloud Infrastructure</option>
+                        <option value="Branding">Branding & Print Design</option>
+                        <option value="Consulting">Corporate Consulting</option>
+                    </select>
+                </div>
+                <div class="flex-end mt-4" style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-client')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Partner</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: CLIENT DETAIL PREVIEW -->
+    <div class="modal-overlay" id="modal-client-detail">
+        <div class="modal-content" style="max-width: 750px;">
+            <button class="modal-close" onclick="closeModal('modal-client-detail')">&times;</button>
+            
+            <div class="client-profile-header">
+                <div class="client-profile-meta">
+                    <h2 id="detail-business-name">Business Name</h2>
+                    <p style="color: var(--text-secondary); margin-top: 0.25rem;">
+                        Rep: <span id="detail-contact-name" style="color: white; font-weight: 500;">John Doe</span> | Sector: <span id="detail-focus-tag" class="badge badge-type">Custom Software</span>
+                    </p>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn btn-outline" id="btn-edit-client-profile" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                        <i data-lucide="edit-3" style="width: 14px; height: 14px;"></i> Edit Info
+                    </button>
+                    <button class="btn btn-danger" id="btn-delete-client-profile" style="padding: 0.5rem 1rem; font-size: 0.85rem;">
+                        <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i> Delete
+                    </button>
+                </div>
+            </div>
+
+            <!-- Client Financial Summary -->
+            <div class="client-financials">
+                <div class="financial-box">
+                    <div class="financial-label">Total Contract Value</div>
+                    <div class="financial-value" id="detail-total-billed" style="color: var(--primary);">₹0</div>
+                </div>
+                <div class="financial-box">
+                    <div class="financial-label">Settled Amount</div>
+                    <div class="financial-value" id="detail-total-paid" style="color: var(--success);">₹0</div>
+                </div>
+                <div class="financial-box">
+                    <div class="financial-label">Net Balance due</div>
+                    <div class="financial-value" id="detail-total-balance" style="color: var(--warning);">₹0</div>
+                </div>
+            </div>
+
+            <div class="client-profile-tabs">
+                <button class="tab-btn active" onclick="switchDetailTab('docs')">Documents</button>
+                <button class="tab-btn" onclick="switchDetailTab('payments')">Payment Ledger</button>
+                <button class="tab-btn" onclick="switchDetailTab('info')">Business Details</button>
+            </div>
+
+            <!-- TAB: DOCUMENTS -->
+            <div class="tab-pane active" id="detail-tab-docs">
+                <div class="table-container" style="max-height: 250px; overflow-y: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Ref ID / Date</th>
+                                <th>Amt</th>
+                                <th style="text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detail-docs-tbody">
+                            <!-- Documents dynamically loaded -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB: PAYMENTS -->
+            <div class="tab-pane" id="detail-tab-payments">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                    <label>Transaction Logs</label>
+                    <button class="btn btn-secondary" id="btn-detail-record-payment" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">
+                        <i data-lucide="plus" style="width: 12px; height: 12px;"></i> Log Payment
+                    </button>
+                </div>
+                <div class="table-container" style="max-height: 200px; overflow-y: auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Ref #</th>
+                                <th>Type</th>
+                                <th>Method</th>
+                                <th style="text-align: right;">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detail-payments-tbody">
+                            <!-- Payments dynamically loaded -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB: DETAILS -->
+            <div class="tab-pane" id="detail-tab-info">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.9rem; line-height: 1.6;">
+                    <div>
+                        <div class="mb-2"><span style="color: var(--text-secondary);">Email:</span> <span id="detail-email" style="color: white; font-weight: 500;">john@acmecorp.com</span></div>
+                        <div class="mb-2"><span style="color: var(--text-secondary);">Phone:</span> <span id="detail-phone" style="color: white; font-weight: 500;">98765 43210</span></div>
+                    </div>
+                    <div>
+                        <div class="mb-2"><span style="color: var(--text-secondary);">Billing Address:</span></div>
+                        <p id="detail-address" style="color: white; font-style: italic;">Corporate Park, Bangalore</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-end mt-4" style="display: flex; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closeModal('modal-client-detail')">Close Profile</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: RECORD PAYMENT -->
+    <div class="modal-overlay" id="modal-payment">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('modal-payment')">&times;</button>
+            <h3 class="modal-title">Record Payment Receipt</h3>
+            <form id="payment-form">
+                <div class="form-group">
+                    <label for="pay-client-select">Select Corporate Client</label>
+                    <select id="pay-client-select" required>
+                        <option value="">-- Choose Client --</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="pay-invoice-select">Associate Invoice (Optional)</label>
+                    <select id="pay-invoice-select">
+                        <option value="">-- No Invoice Reference --</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="pay-amount">Amount Received (₹)</label>
+                        <input type="number" id="pay-amount" min="1" placeholder="e.g. 50000" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="pay-date">Payment Date</label>
+                        <input type="date" id="pay-date" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="pay-type">Payment Type</label>
+                        <select id="pay-type" required>
+                            <option value="Advance" selected>Advance / Retainer</option>
+                            <option value="Installment">Installment</option>
+                            <option value="Final Settlement">Final Settlement</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="pay-method">Payment Method</label>
+                        <select id="pay-method" required>
+                            <option value="UPI" selected>UPI (GPay / PhonePe / Paytm)</option>
+                            <option value="Bank Transfer">Bank Transfer (IMPS / NEFT)</option>
+                            <option value="Cash">Cash Handover</option>
+                            <option value="Card">Credit/Debit Card</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="pay-notes">Transaction Reference Notes</label>
+                    <input type="text" id="pay-notes" placeholder="UPI Ref ID, IMPS Reference, or comments">
+                </div>
+
+                <div class="flex-end mt-4" style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-payment')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Log Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: BACKUP & RESTORE -->
+    <div class="modal-overlay" id="modal-backup">
+        <div class="modal-content" style="max-width: 480px;">
+            <button class="modal-close" onclick="closeModal('modal-backup')">&times;</button>
+            <h3 class="modal-title">Operational Data Backup & Sync</h3>
+            
+            <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); padding: 1.25rem; border-radius: var(--radius-md); margin-bottom: 1.5rem; font-size: 0.85rem; line-height: 1.5;">
+                <p class="mb-2"><b style="color: var(--primary);">Local Database:</b> Your records are saved locally in this browser's cache. Clearing your browser data will clear this database.</p>
+                <p><b>Backup Recommendation:</b> Export a JSON backup periodically to keep your client databases safe or to sync them across multiple machines.</p>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <button class="btn btn-primary w-full flex-center" id="btn-export-json">
+                    <i data-lucide="download-cloud"></i> Export Database (JSON)
+                </button>
+                
+                <button class="btn btn-danger w-full flex-center" id="btn-reset-db">
+                    <i data-lucide="trash-2"></i> Reset Database (Clear All Data)
+                </button>
+                
+                <div style="border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 0.5rem; text-align: center;">
+                    <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.75rem;">Import / Restore Backup</span>
+                    
+                    <label for="backup-file-input" class="btn btn-secondary w-full flex-center" style="cursor: pointer;">
+                        <i data-lucide="upload-cloud"></i> Select Backup File (.json)
+                    </label>
+                    <input type="file" id="backup-file-input" accept=".json" style="display: none;">
+                </div>
+
+                <div style="border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 0.5rem;">
+                    <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.75rem; text-align: center;">Supabase Cloud Sync Settings</span>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 0.75rem;">
+                        <div class="form-group mb-0">
+                            <label for="sb-url" style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 0.25rem;">Supabase Project URL</label>
+                            <input type="text" id="sb-url" placeholder="https://your-project.supabase.co" style="padding: 0.5rem; font-size: 0.8rem; width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-sm);">
+                        </div>
+                        <div class="form-group mb-0">
+                            <label for="sb-key" style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 0.25rem;">Supabase Anon API Key</label>
+                            <input type="password" id="sb-key" placeholder="eyJhbGciOi..." style="padding: 0.5rem; font-size: 0.8rem; width: 100%; box-sizing: border-box; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--radius-sm);">
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-primary flex-1 flex-center" id="btn-save-supabase" style="font-size: 0.8rem; padding: 0.5rem;">
+                            <i data-lucide="cloud-lightning"></i> Connect & Sync
+                        </button>
+                        <button class="btn btn-danger flex-center" id="btn-disconnect-supabase" style="font-size: 0.8rem; padding: 0.5rem; display: none;">
+                            <i data-lucide="cloud-off"></i> Disconnect
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-end mt-4" style="display: flex; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closeModal('modal-backup')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST ALERT CONTAINER -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
