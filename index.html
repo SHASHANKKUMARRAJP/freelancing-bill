@@ -873,6 +873,30 @@
                 </div>
 
                 <div style="border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 0.5rem;">
+                    <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.75rem; text-align: center;">📱 Install App on Phone / PC</span>
+                    
+                    <!-- Android Install -->
+                    <div id="android-install-section">
+                        <button class="btn btn-primary w-full flex-center" id="btn-pwa-install-manual" style="font-size: 0.85rem; margin-bottom: 0.75rem;">
+                            <i data-lucide="smartphone"></i> Install on Android (Chrome)
+                        </button>
+                    </div>
+
+                    <!-- iOS Instructions -->
+                    <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.85rem; font-size: 0.78rem; line-height: 1.6; color: var(--text-secondary);">
+                        <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 0.4rem;">🍎 iPhone / iPad (Safari):</div>
+                        <div>1. Open this site in <b style="color:white;">Safari</b> browser</div>
+                        <div>2. Tap the <b style="color:white;">Share</b> button (□↑) at the bottom</div>
+                        <div>3. Scroll down → tap <b style="color:white;">"Add to Home Screen"</b></div>
+                        <div>4. Tap <b style="color:white;">"Add"</b> — done! ✅</div>
+                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border-color);">
+                            <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 0.4rem;">💻 PC (Chrome / Edge):</div>
+                            <div>Look for the <b style="color:white;">install icon ⊕</b> in the browser address bar on the right side</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="border-top: 1px solid var(--border-color); padding-top: 1rem; margin-top: 0.5rem;">
                     <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 0.75rem; text-align: center;">Supabase Cloud Sync Settings</span>
                     
                     <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 0.75rem;">
@@ -959,14 +983,38 @@
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
             deferredInstallPrompt = e;
+            // Show floating banner
             const banner = document.getElementById('pwa-install-banner');
             if (banner && !localStorage.getItem('pwa_dismissed')) {
                 banner.style.display = 'flex';
             }
+            // Show Android install button in modal
+            const androidBtn = document.getElementById('btn-pwa-install-manual');
+            if (androidBtn) androidBtn.style.display = 'flex';
         });
 
+        // Hide Android install button on iOS (Safari doesn't support it)
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        if (isIOS) {
+            const androidBtn = document.getElementById('btn-pwa-install-manual');
+            if (androidBtn) androidBtn.closest('#android-install-section').style.display = 'none';
+        }
+
+        // Floating banner install button
         document.getElementById('pwa-install-btn')?.addEventListener('click', async () => {
             if (!deferredInstallPrompt) return;
+            deferredInstallPrompt.prompt();
+            const { outcome } = await deferredInstallPrompt.userChoice;
+            deferredInstallPrompt = null;
+            document.getElementById('pwa-install-banner').style.display = 'none';
+        });
+
+        // Modal "Install on Android" button
+        document.getElementById('btn-pwa-install-manual')?.addEventListener('click', async () => {
+            if (!deferredInstallPrompt) {
+                alert('Install option not available yet. Make sure you are using Chrome on Android and the site is fully loaded. Try refreshing once.');
+                return;
+            }
             deferredInstallPrompt.prompt();
             const { outcome } = await deferredInstallPrompt.userChoice;
             deferredInstallPrompt = null;
