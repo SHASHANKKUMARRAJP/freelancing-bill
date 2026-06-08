@@ -17,8 +17,8 @@ let supabaseClient = null;
 // --- DEFAULT CLOUD CONFIGURATION ---
 // To sync data automatically across all devices after deployment, paste your Supabase credentials here:
 const DEFAULT_SUPABASE_CONFIG = {
-    url: "", // Paste your Supabase URL here, e.g., "https://xyz.supabase.co"
-    key: ""  // Paste your Supabase Anon API Key here
+    url: "https://neqgqnfcbcvzbgecasth.supabase.co", // Paste your Supabase URL here, e.g., "https://xyz.supabase.co"
+    key: "sb_publishable_h3JYBMIiodD3c-HuI-kO0w_Pw1IO5Qr"  // Paste your Supabase Anon API Key here
 };
 
 // Helper to update the Database connection indicator badge
