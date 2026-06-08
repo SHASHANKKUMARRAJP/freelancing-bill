@@ -14,6 +14,13 @@ const DEFAULT_STATE = {
 let appState = {};
 let supabaseClient = null;
 
+// --- DEFAULT CLOUD CONFIGURATION ---
+// To sync data automatically across all devices after deployment, paste your Supabase credentials here:
+const DEFAULT_SUPABASE_CONFIG = {
+    url: "", // Paste your Supabase URL here, e.g., "https://xyz.supabase.co"
+    key: ""  // Paste your Supabase Anon API Key here
+};
+
 // Helper to update the Database connection indicator badge
 function updateDBBadge(connected) {
     const badge = document.getElementById('db-status-badge');
@@ -35,24 +42,39 @@ function updateDBBadge(connected) {
 }
 
 function initSupabase() {
+    let url = DEFAULT_SUPABASE_CONFIG.url;
+    let key = DEFAULT_SUPABASE_CONFIG.key;
+
+    // Check if user has a custom connection set in local browser storage (overrides default)
     const configStr = localStorage.getItem("pradraksha_supabase_config");
     if (configStr) {
         try {
             const config = JSON.parse(configStr);
             if (config.url && config.key) {
-                supabaseClient = supabase.createClient(config.url, config.key);
-                document.getElementById('sb-url').value = config.url;
-                document.getElementById('sb-key').value = config.key;
-                document.getElementById('btn-disconnect-supabase').style.display = 'inline-flex';
-                updateDBBadge(true);
+                url = config.url;
+                key = config.key;
             }
         } catch (e) {
             console.error("Failed to parse Supabase config", e);
+        }
+    }
+
+    if (url && key) {
+        try {
+            supabaseClient = supabase.createClient(url, key);
+            document.getElementById('sb-url').value = url;
+            document.getElementById('sb-key').value = key;
+            document.getElementById('btn-disconnect-supabase').style.display = 'inline-flex';
+            updateDBBadge(true);
+        } catch (e) {
+            console.error("Failed to initialize Supabase client", e);
+            updateDBBadge(false);
         }
     } else {
         updateDBBadge(false);
     }
 }
+
 
 async function syncFromSupabase() {
     if (!supabaseClient) return;
