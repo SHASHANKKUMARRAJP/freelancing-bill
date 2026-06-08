@@ -1,0 +1,42 @@
+{
+  "name": "Pradraksha Groups - Operations Hub",
+  "short_name": "Pradraksha",
+  "description": "Enterprise operations app for managing clients, invoices, agreements and payments.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0f19",
+  "theme_color": "#2563eb",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "finance", "productivity"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Add Client",
+      "short_name": "Client",
+      "description": "Register a new corporate client",
+      "url": "/#clients",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Payment Ledger",
+      "short_name": "Ledger",
+      "description": "View payment transactions",
+      "url": "/#payments",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

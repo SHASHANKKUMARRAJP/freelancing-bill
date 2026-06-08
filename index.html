@@ -2,9 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Pradraksha Groups - Enterprise Operations Hub</title>
     <meta name="description" content="Operational dashboard for Pradraksha Groups. Manage client accounts, compile invoices, generate Master Service Agreements, and track payments.">
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#2563eb">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Pradraksha">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
     <link rel="stylesheet" href="styles.css">
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -894,9 +903,90 @@
         </div>
     </div>
 
+    <!-- MOBILE BOTTOM NAVIGATION BAR -->
+    <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+        <a href="#dashboard" class="mobile-nav-item active" id="mob-nav-dashboard">
+            <i data-lucide="layout-dashboard"></i>
+            <span>Home</span>
+        </a>
+        <a href="#clients" class="mobile-nav-item" id="mob-nav-clients">
+            <i data-lucide="users"></i>
+            <span>Clients</span>
+        </a>
+        <a href="#invoices" class="mobile-nav-item" id="mob-nav-invoices">
+            <i data-lucide="receipt"></i>
+            <span>Invoice</span>
+        </a>
+        <a href="#payments" class="mobile-nav-item" id="mob-nav-payments">
+            <i data-lucide="wallet"></i>
+            <span>Ledger</span>
+        </a>
+        <a href="#agreements" class="mobile-nav-item" id="mob-nav-agreements">
+            <i data-lucide="file-text"></i>
+            <span>MSA</span>
+        </a>
+    </nav>
+
+    <!-- PWA Install Banner -->
+    <div class="pwa-install-banner" id="pwa-install-banner" style="display:none;">
+        <div class="pwa-install-content">
+            <img src="icon-192.png" alt="App Icon" style="width:40px;height:40px;border-radius:10px;">
+            <div>
+                <div style="font-weight:700;font-size:0.9rem;">Install Pradraksha App</div>
+                <div style="font-size:0.75rem;color:var(--text-secondary);">Add to home screen for quick access</div>
+            </div>
+        </div>
+        <div style="display:flex;gap:0.5rem;">
+            <button class="btn btn-primary" id="pwa-install-btn" style="padding:0.4rem 0.9rem;font-size:0.8rem;">Install</button>
+            <button class="btn btn-secondary" id="pwa-dismiss-btn" style="padding:0.4rem 0.7rem;font-size:0.8rem;">✕</button>
+        </div>
+    </div>
+
     <!-- TOAST ALERT CONTAINER -->
     <div class="toast-container" id="toast-container"></div>
 
     <script src="app.js"></script>
+    <script>
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch(() => {});
+            });
+        }
+
+        // PWA Install Prompt
+        let deferredInstallPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredInstallPrompt = e;
+            const banner = document.getElementById('pwa-install-banner');
+            if (banner && !localStorage.getItem('pwa_dismissed')) {
+                banner.style.display = 'flex';
+            }
+        });
+
+        document.getElementById('pwa-install-btn')?.addEventListener('click', async () => {
+            if (!deferredInstallPrompt) return;
+            deferredInstallPrompt.prompt();
+            const { outcome } = await deferredInstallPrompt.userChoice;
+            deferredInstallPrompt = null;
+            document.getElementById('pwa-install-banner').style.display = 'none';
+        });
+
+        document.getElementById('pwa-dismiss-btn')?.addEventListener('click', () => {
+            document.getElementById('pwa-install-banner').style.display = 'none';
+            localStorage.setItem('pwa_dismissed', '1');
+        });
+
+        // Sync mobile bottom nav with route changes
+        function syncMobileNav() {
+            const hash = window.location.hash.substring(1) || 'dashboard';
+            document.querySelectorAll('.mobile-nav-item').forEach(el => el.classList.remove('active'));
+            const mob = document.getElementById('mob-nav-' + hash);
+            if (mob) mob.classList.add('active');
+        }
+        window.addEventListener('hashchange', syncMobileNav);
+        syncMobileNav();
+    </script>
 </body>
 </html>
