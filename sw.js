@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pradraksha-ops-v2';
+const CACHE_NAME = 'pradraksha-ops-v4';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

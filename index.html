@@ -14,7 +14,9 @@
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=4">
+
+
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- html2pdf.js bundle -->
@@ -83,12 +85,16 @@
                         <span class="user-role">Finance Controller</span>
                     </div>
                 </div>
-                <div class="flex-row mt-4">
-                    <button class="btn btn-secondary w-full" id="btn-open-backup" style="font-size: 0.8rem; padding: 0.5rem;">
+                <div style="display: flex; gap: 0.5rem; margin-top: 1rem; align-items: center;">
+                    <button class="btn btn-secondary" id="btn-open-backup" style="font-size: 0.8rem; padding: 0.5rem; flex: 1;">
                         <i data-lucide="database" style="width: 14px; height: 14px;"></i>
                         Backup & Sync
                     </button>
+                    <button class="btn btn-secondary btn-icon-only" id="btn-toggle-theme-sidebar" style="padding: 0.5rem; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px;" title="Toggle Light/Dark Mode">
+                        <i data-lucide="sun" class="theme-icon" style="width: 14px; height: 14px;"></i>
+                    </button>
                 </div>
+
             </div>
         </aside>
 
@@ -106,10 +112,14 @@
                         <span>DB: Local</span>
                     </span>
                     <span id="current-date-badge" class="badge badge-type" style="padding: 0.5rem 1rem;">June 8, 2026</span>
+                    <button class="btn btn-secondary btn-icon-only" id="btn-toggle-theme-header" style="padding: 0.5rem; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px;" title="Toggle Light/Dark Mode">
+                        <i data-lucide="sun" class="theme-icon" style="width: 14px; height: 14px;"></i>
+                    </button>
                     <button class="btn btn-primary" id="btn-header-action">
                         <i data-lucide="plus"></i>
                         <span>Add New Client</span>
                     </button>
+
                 </div>
             </header>
 
@@ -220,7 +230,21 @@
 
             <!-- SECTION: AGREEMENTS -->
             <section id="section-agreements" class="app-section">
-                <div class="generator-split">
+                <!-- Workspace View Selector -->
+                <div class="view-toggle-bar mb-4">
+                    <button type="button" class="view-toggle-btn active" data-view="split" onclick="setAgreementView('split')">
+                        <i data-lucide="columns"></i> <span>Split View</span>
+                    </button>
+                    <button type="button" class="view-toggle-btn" data-view="form" onclick="setAgreementView('form')">
+                        <i data-lucide="file-edit"></i> <span>Edit Details</span>
+                    </button>
+                    <button type="button" class="view-toggle-btn" data-view="preview" onclick="setAgreementView('preview')">
+                        <i data-lucide="eye"></i> <span>PDF Preview</span>
+                    </button>
+                </div>
+
+                <div class="generator-split" id="agreement-split-container">
+
                     <!-- Left Form Panel -->
                     <div class="glass-panel">
                         <h2 class="mb-2" style="font-size: 1.25rem;">Contract Scope</h2>
@@ -383,7 +407,21 @@
 
             <!-- SECTION: INVOICES -->
             <section id="section-invoices" class="app-section">
-                <div class="generator-split">
+                <!-- Workspace View Selector -->
+                <div class="view-toggle-bar mb-4">
+                    <button type="button" class="view-toggle-btn active" data-view="split" onclick="setInvoiceView('split')">
+                        <i data-lucide="columns"></i> <span>Split View</span>
+                    </button>
+                    <button type="button" class="view-toggle-btn" data-view="form" onclick="setInvoiceView('form')">
+                        <i data-lucide="file-edit"></i> <span>Edit Details</span>
+                    </button>
+                    <button type="button" class="view-toggle-btn" data-view="preview" onclick="setInvoiceView('preview')">
+                        <i data-lucide="eye"></i> <span>PDF Preview</span>
+                    </button>
+                </div>
+
+                <div class="generator-split" id="invoice-split-container">
+
                     <!-- Left Form Panel -->
                     <div class="glass-panel">
                         <h2 class="mb-2" style="font-size: 1.25rem;">Billing Details</h2>
@@ -969,7 +1007,7 @@
     <!-- TOAST ALERT CONTAINER -->
     <div class="toast-container" id="toast-container"></div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=4"></script>
     <script>
         // Register Service Worker for PWA
         if ('serviceWorker' in navigator) {

@@ -2022,6 +2022,73 @@ document.addEventListener("DOMContentLoaded", () => {
     
     initInvoiceFormDefaults();
     renderQRCodeWidget();
+    initThemeToggle();
     lucide.createIcons();
     updateAllViews();
 });
+
+// --- 13. MODERNIZATION & VIEW MODE FUNCTIONS ---
+function initThemeToggle() {
+    const savedTheme = localStorage.getItem('pradraksha_theme') || 'dark';
+    setTheme(savedTheme);
+    
+    const toggleSidebar = document.getElementById('btn-toggle-theme-sidebar');
+    const toggleHeader = document.getElementById('btn-toggle-theme-header');
+    
+    const handleToggle = () => {
+        const currentTheme = document.body.classList.contains('light-theme') ? 'light' : 'dark';
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        setTheme(newTheme);
+    };
+    
+    if (toggleSidebar) toggleSidebar.onclick = handleToggle;
+    if (toggleHeader) toggleHeader.onclick = handleToggle;
+}
+
+function setTheme(theme) {
+    const toggleSidebar = document.getElementById('btn-toggle-theme-sidebar');
+    const toggleHeader = document.getElementById('btn-toggle-theme-header');
+    
+    if (theme === 'light') {
+        document.body.classList.add('light-theme');
+        if (toggleSidebar) toggleSidebar.innerHTML = `<i data-lucide="moon" class="theme-icon" style="width: 14px; height: 14px;"></i>`;
+        if (toggleHeader) toggleHeader.innerHTML = `<i data-lucide="moon" class="theme-icon" style="width: 14px; height: 14px;"></i>`;
+        localStorage.setItem('pradraksha_theme', 'light');
+    } else {
+        document.body.classList.remove('light-theme');
+        if (toggleSidebar) toggleSidebar.innerHTML = `<i data-lucide="sun" class="theme-icon" style="width: 14px; height: 14px;"></i>`;
+        if (toggleHeader) toggleHeader.innerHTML = `<i data-lucide="sun" class="theme-icon" style="width: 14px; height: 14px;"></i>`;
+        localStorage.setItem('pradraksha_theme', 'dark');
+    }
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+
+function setAgreementView(mode) {
+    const container = document.getElementById('agreement-split-container');
+    if (!container) return;
+    container.classList.remove('view-mode-form', 'view-mode-preview');
+    if (mode === 'form') container.classList.add('view-mode-form');
+    if (mode === 'preview') container.classList.add('view-mode-preview');
+    
+    document.querySelectorAll('#section-agreements .view-toggle-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-view') === mode);
+    });
+}
+window.setAgreementView = setAgreementView;
+
+function setInvoiceView(mode) {
+    const container = document.getElementById('invoice-split-container');
+    if (!container) return;
+    container.classList.remove('view-mode-form', 'view-mode-preview');
+    if (mode === 'form') container.classList.add('view-mode-form');
+    if (mode === 'preview') container.classList.add('view-mode-preview');
+    
+    document.querySelectorAll('#section-invoices .view-toggle-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-view') === mode);
+    });
+}
+window.setInvoiceView = setInvoiceView;
+
