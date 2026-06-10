@@ -125,27 +125,28 @@
 
             <!-- SECTION: DASHBOARD -->
             <section id="section-dashboard" class="app-section active-section">
-                <!-- Quick Command Panel -->
-                <div class="glass-panel" style="margin-bottom: 2rem; padding: 1.25rem;">
-                    <h3 style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.75px; color: var(--text-muted); margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">Quick Command Center</h3>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1rem;">
-                        <button class="btn btn-secondary flex-center" onclick="quickNavigate('clients-add')" style="padding: 1rem; flex-direction: column; gap: 0.5rem; text-align: center; height: auto;">
-                            <i data-lucide="user-plus" style="width: 24px; height: 24px; color: #60a5fa;"></i>
-                            <span style="font-size: 0.85rem; font-weight: 600;">Add Client Partner</span>
-                        </button>
-
-                        <button class="btn btn-secondary flex-center" onclick="quickNavigate('agreements')" style="padding: 1rem; flex-direction: column; gap: 0.5rem; text-align: center; height: auto;">
-                            <i data-lucide="file-text" style="width: 24px; height: 24px; color: #a78bfa;"></i>
-                            <span style="font-size: 0.85rem; font-weight: 600;">Draft Agreement</span>
-                        </button>
-                        <button class="btn btn-secondary flex-center" onclick="quickNavigate('invoices')" style="padding: 1rem; flex-direction: column; gap: 0.5rem; text-align: center; height: auto;">
-                            <i data-lucide="receipt" style="width: 24px; height: 24px; color: #f43f5e;"></i>
-                            <span style="font-size: 0.85rem; font-weight: 600;">Draft Invoice</span>
-                        </button>
-                        <button class="btn btn-secondary flex-center" onclick="quickNavigate('payments-log')" style="padding: 1rem; flex-direction: column; gap: 0.5rem; text-align: center; height: auto;">
-                            <i data-lucide="wallet" style="width: 24px; height: 24px; color: #34d399;"></i>
-                            <span style="font-size: 0.85rem; font-weight: 600;">Record Payout</span>
-                        </button>
+                <!-- HERO WELCOME & INSIGHTS HUB -->
+                <div class="glass-panel welcome-hero" style="margin-bottom: 2rem; padding: 2rem; position: relative; overflow: hidden; border-radius: var(--radius-lg); background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(37, 99, 235, 0.05) 50%, rgba(16, 185, 129, 0.02) 100%);">
+                    <div class="hero-glow" style="position: absolute; top: -50%; right: -20%; width: 250px; height: 250px; background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%); filter: blur(40px); z-index: 0; pointer-events: none;"></div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 2rem; flex-wrap: wrap; position: relative; z-index: 2;">
+                        <div>
+                            <span class="badge" style="background: rgba(99, 102, 241, 0.12); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.25); font-size: 0.72rem; margin-bottom: 0.75rem; letter-spacing: 1px;">SYSTEM STATUS: ACTIVE & ONLINE</span>
+                            <h2 style="font-size: 1.85rem; font-weight: 800; letter-spacing: -0.5px; background: linear-gradient(to right, #ffffff, #c7d2fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.4rem;" id="greeting-title">Welcome back, Operator</h2>
+                            <p style="color: var(--text-secondary); max-width: 580px; font-size: 0.925rem; line-height: 1.55;" id="greeting-insight">Establishing database handshakes... Local cache active.</p>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 1.25rem; background: rgba(0,0,0,0.18); padding: 0.85rem 1.5rem; border-radius: var(--radius-lg); border: 1px solid rgba(255,255,255,0.03);">
+                            <div class="circular-progress" style="position: relative; width: 68px; height: 68px;">
+                                <svg width="68" height="68" viewBox="0 0 68 68" style="transform: rotate(-90deg); width: 100%; height: 100%;">
+                                    <circle cx="34" cy="34" r="28" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="6" />
+                                    <circle id="gauge-circle-fg" cx="34" cy="34" r="28" fill="none" stroke="url(#gauge-gradient)" stroke-width="6" stroke-dasharray="175.9" stroke-dashoffset="175.9" stroke-linecap="round" style="transition: stroke-dashoffset 1s cubic-bezier(0.4, 0, 0.2, 1);" />
+                                </svg>
+                                <div id="gauge-value-text" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 0.95rem; font-weight: 800; color: var(--text-primary);">0%</div>
+                            </div>
+                            <div>
+                                <span style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 0.15rem;">Collection Rate</span>
+                                <span style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary);" id="gauge-detail-text">₹0 Collected</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -185,19 +186,84 @@
                     </div>
                 </div>
 
-                <!-- System Activity Log -->
-                <div class="glass-panel" style="margin-bottom: 2rem;">
-                    <div class="chart-header">
-                        <div class="chart-title">System Log / Activity Feed</div>
-                    </div>
-                    <div class="recent-activity-list" id="activity-log-container">
-                        <div class="activity-item">
-                            <div class="activity-badge doc"><i data-lucide="info"></i></div>
-                            <div class="activity-details">
-                                <div class="activity-text">Operations module active. Ready to manage corporate assets.</div>
-                                <div class="activity-time">Just now</div>
+                <!-- Analytics Section (Chart on Left, Activity Timeline on Right) -->
+                <div class="analytics-section">
+                    <div class="glass-panel" style="display: flex; flex-direction: column; position: relative;">
+                        <div class="chart-header">
+                            <div class="chart-title" style="font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                                <i data-lucide="trending-up" style="color: var(--primary); width: 18px; height: 18px;"></i>
+                                Billing vs Cash Collected
+                            </div>
+                            <div style="display: flex; gap: 1rem; font-size: 0.78rem; font-weight: 600;">
+                                <span style="display: inline-flex; align-items: center; gap: 0.35rem;"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--primary);"></span> Invoiced</span>
+                                <span style="display: inline-flex; align-items: center; gap: 0.35rem;"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--success);"></span> Collected</span>
                             </div>
                         </div>
+                        <div class="chart-container" style="position: relative; height: 260px; min-height: 260px; flex-grow: 1;">
+                            <svg class="chart-svg" id="dashboard-chart-svg" viewBox="0 0 600 240" preserveAspectRatio="none" style="width: 100%; height: 100%;">
+                                <defs>
+                                    <linearGradient id="revenue-gradient" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="var(--primary)" stop-opacity="0.25"/>
+                                        <stop offset="100%" stop-color="var(--primary)" stop-opacity="0.0"/>
+                                    </linearGradient>
+                                    <linearGradient id="collected-gradient" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="var(--success)" stop-opacity="0.25"/>
+                                        <stop offset="100%" stop-color="var(--success)" stop-opacity="0.0"/>
+                                    </linearGradient>
+                                    <linearGradient id="gauge-gradient" x1="0" y1="0" x2="1" y2="1">
+                                        <stop offset="0%" stop-color="#818cf8"/>
+                                        <stop offset="100%" stop-color="#34d399"/>
+                                    </linearGradient>
+                                </defs>
+                                <!-- Injected dynamically via app.js -->
+                            </svg>
+                            <div id="chart-tooltip" style="position: absolute; display: none; background: rgba(9, 9, 11, 0.95); border: 1px solid var(--border-color); padding: 0.5rem 0.75rem; border-radius: var(--radius-md); font-size: 0.75rem; color: var(--text-primary); pointer-events: none; z-index: 10; box-shadow: 0 10px 25px rgba(0,0,0,0.5);"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="glass-panel" style="display: flex; flex-direction: column;">
+                        <div class="chart-header">
+                            <div class="chart-title" style="font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                                <i data-lucide="activity" style="color: #60a5fa; width: 18px; height: 18px;"></i>
+                                Activity Feed
+                            </div>
+                        </div>
+                        <div class="recent-activity-list" id="activity-log-container">
+                            <div class="activity-item">
+                                <div class="activity-badge doc"><i data-lucide="info"></i></div>
+                                <div class="activity-details">
+                                    <div class="activity-text">Operations module active. Ready to manage corporate assets.</div>
+                                    <div class="activity-time">Just now</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Command Panel -->
+                <div class="glass-panel" style="margin-bottom: 2rem; padding: 1.25rem; position: relative;">
+                    <h3 style="font-size: 0.825rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.75px; color: var(--text-muted); margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; display: flex; align-items: center; gap: 0.35rem;">
+                        <i data-lucide="terminal" style="width: 14px; height: 14px;"></i>
+                        Quick Actions
+                    </h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1rem;">
+                        <button class="btn btn-secondary flex-center btn-quick-action" onclick="quickNavigate('clients-add')" style="padding: 1.25rem 1rem; flex-direction: column; gap: 0.5rem; text-align: center; height: auto;">
+                            <div class="action-icon-wrap" style="width: 42px; height: 42px; border-radius: var(--radius-md); background: rgba(96, 165, 250, 0.1); display: flex; align-items: center; justify-content: center; transition: all var(--transition-fast);"><i data-lucide="user-plus" style="width: 20px; height: 20px; color: #60a5fa;"></i></div>
+                            <span style="font-size: 0.85rem; font-weight: 700; margin-top: 0.25rem;">Add Partner</span>
+                        </button>
+
+                        <button class="btn btn-secondary flex-center btn-quick-action" onclick="quickNavigate('agreements')" style="padding: 1.25rem 1rem; flex-direction: column; gap: 0.5rem; text-align: center; height: auto;">
+                            <div class="action-icon-wrap" style="width: 42px; height: 42px; border-radius: var(--radius-md); background: rgba(167, 139, 250, 0.1); display: flex; align-items: center; justify-content: center; transition: all var(--transition-fast);"><i data-lucide="file-text" style="width: 20px; height: 20px; color: #a78bfa;"></i></div>
+                            <span style="font-size: 0.85rem; font-weight: 700; margin-top: 0.25rem;">Draft MSA</span>
+                        </button>
+                        <button class="btn btn-secondary flex-center btn-quick-action" onclick="quickNavigate('invoices')" style="padding: 1.25rem 1rem; flex-direction: column; gap: 0.5rem; text-align: center; height: auto;">
+                            <div class="action-icon-wrap" style="width: 42px; height: 42px; border-radius: var(--radius-md); background: rgba(244, 63, 94, 0.1); display: flex; align-items: center; justify-content: center; transition: all var(--transition-fast);"><i data-lucide="receipt" style="width: 20px; height: 20px; color: #f43f5e;"></i></div>
+                            <span style="font-size: 0.85rem; font-weight: 700; margin-top: 0.25rem;">Draft Invoice</span>
+                        </button>
+                        <button class="btn btn-secondary flex-center btn-quick-action" onclick="quickNavigate('payments-log')" style="padding: 1.25rem 1rem; flex-direction: column; gap: 0.5rem; text-align: center; height: auto;">
+                            <div class="action-icon-wrap" style="width: 42px; height: 42px; border-radius: var(--radius-md); background: rgba(52, 211, 153, 0.1); display: flex; align-items: center; justify-content: center; transition: all var(--transition-fast);"><i data-lucide="wallet" style="width: 20px; height: 20px; color: #34d399;"></i></div>
+                            <span style="font-size: 0.85rem; font-weight: 700; margin-top: 0.25rem;">Record Payout</span>
+                        </button>
                     </div>
                 </div>
             </section>
@@ -426,6 +492,7 @@
                     <div class="glass-panel">
                         <h2 class="mb-2" style="font-size: 1.25rem;">Billing Details</h2>
                         <form id="invoice-form">
+                            <!-- Section: General Metadata -->
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="invoice-num">Invoice Serial Number</label>
@@ -436,17 +503,200 @@
                                     <input type="date" id="invoice-date" required>
                                 </div>
                             </div>
-
-                            <div class="form-group">
-                                <label for="invoice-client-select">Select Corporate Client</label>
-                                <select id="invoice-client-select" required>
-                                    <option value="">-- Choose Client --</option>
-                                </select>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="invoice-due-date">Payment Due Date</label>
+                                    <input type="date" id="invoice-due-date">
+                                </div>
+                                <div class="form-group">
+                                    <label for="invoice-status">Invoice Status</label>
+                                    <select id="invoice-status" required>
+                                        <option value="Draft">Draft</option>
+                                        <option value="Pending" selected>Pending</option>
+                                        <option value="Paid">Paid</option>
+                                        <option value="Overdue">Overdue</option>
+                                    </select>
+                                </div>
                             </div>
 
+                            <!-- Expandable Section: Company Details (From) -->
+                            <details class="form-details" style="margin-bottom: 1.25rem;">
+                                <summary>
+                                    <span style="font-weight: 700; color: #60a5fa;">Company Details (Billing Entity)</span>
+                                    <span style="font-size: 0.75rem; font-weight: normal; color: var(--text-muted); text-decoration: underline;">Edit default letterhead</span>
+                                </summary>
+                                <div class="form-details-content" style="margin-top: 1rem;">
+                                    <div class="form-group">
+                                        <label for="invoice-co-name">Company Name</label>
+                                        <input type="text" id="invoice-co-name" value="Pradraksha Groups" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="invoice-co-address">Office Address</label>
+                                        <input type="text" id="invoice-co-address" value="Pradraksha Towers, Sector 4, HSR Layout, Bangalore, Karnataka - 560102" required>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="invoice-co-email">Email Address</label>
+                                            <input type="email" id="invoice-co-email" value="finance@pradraksha.com" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="invoice-co-phone">Phone Number</label>
+                                            <input type="text" id="invoice-co-phone" value="+91 98765 43210" required>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="invoice-co-website">Website URL</label>
+                                        <input type="text" id="invoice-co-website" value="www.pradraksha.com">
+                                    </div>
+                                </div>
+                            </details>
+
+                            <!-- Section: Client Selection & Project Details -->
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="invoice-client-select">Select Corporate Client</label>
+                                    <select id="invoice-client-select" required>
+                                        <option value="">-- Choose Client --</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="invoice-proj-name">Project / Contract Name</label>
+                                    <input type="text" id="invoice-proj-name" placeholder="e.g. ERP Development Phase 1" required>
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="invoice-proj-type">Project Type</label>
+                                    <select id="invoice-proj-type" required>
+                                        <option value="Website">Website</option>
+                                        <option value="QR Menu Website">QR Menu Website</option>
+                                        <option value="Restaurant Website">Restaurant Website</option>
+                                        <option value="Business Website" selected>Business Website</option>
+                                        <option value="E-Commerce Website">E-Commerce Website</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="invoice-proj-desc">Project Short Description</label>
+                                    <input type="text" id="invoice-proj-desc" placeholder="e.g. Design & deployment of custom administrative dashboard">
+                                </div>
+                            </div>
+
+                            <!-- Expandable Section: Preset Deliverables Library -->
+                            <details class="form-details" style="margin-bottom: 1.25rem;">
+                                <summary>
+                                    <span style="font-weight: 700; color: #a855f7;">Preset Deliverables Library</span>
+                                    <span style="font-size: 0.75rem; font-weight: normal; color: var(--text-muted); text-decoration: underline;">Click to insert items</span>
+                                </summary>
+                                <div class="form-details-content" style="margin-top: 1rem; max-height: 250px; overflow-y: auto; padding-right: 0.25rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                                    <div style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4;">
+                                        Click on any predefined component to add it directly as an invoice line item:
+                                    </div>
+                                    
+                                    <div class="preset-category">
+                                        <div style="font-weight: 700; color: #a855f7; font-size: 0.8rem; margin-bottom: 0.4rem;">Core Layout & Pages</div>
+                                        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;" class="preset-btn-group">
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Landing Page')">Landing Page</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Hero Section')">Hero Section</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Navigation Bar')">Navigation Bar</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Footer')">Footer</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('About Us Section')">About Us Section</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Our Story Section')">Our Story Section</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Services Section')">Services Section</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Features Section')">Features Section</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('FAQ Section')">FAQ Section</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Testimonials & Reviews')">Testimonials</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Blog & News Section')">Blog Section</button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="preset-category">
+                                        <div style="font-weight: 700; color: #10b981; font-size: 0.8rem; margin-bottom: 0.4rem;">E-Commerce & Digital Menu</div>
+                                        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;" class="preset-btn-group">
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Digital Menu Website')">Digital Menu</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('QR Menu System')">QR Menu</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Menu Categories Management')">Menu Categories</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Menu Item Cards & Layout')">Menu Item Cards</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Menu Search & Filter')">Menu Search</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Product Catalog Listing')">Product Catalog</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Product Cards Grid')">Product Cards</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Featured Products Panel')">Featured Products</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Order Management System')">Order Management</button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="preset-category">
+                                        <div style="font-weight: 700; color: #3b82f6; font-size: 0.8rem; margin-bottom: 0.4rem;">Contact & Location Integrations</div>
+                                        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;" class="preset-btn-group">
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Contact Page & Forms')">Contact Page</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Contact Form Validation')">Contact Form</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Business Inquiry Form')">Inquiry Form</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Business Location Map')">Location Map</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Google Maps API Integration')">Google Maps</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('WhatsApp API Integration')">WhatsApp Chat</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Call Now Action Button')">Call Now Button</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Direct Email Contact API')">Email Button</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Social Media Handle Icons')">Social Media</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Newsletter Subscription Form')">Newsletter Sub</button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="preset-category">
+                                        <div style="font-weight: 700; color: #f59e0b; font-size: 0.8rem; margin-bottom: 0.4rem;">Dashboard, Auth & CMS</div>
+                                        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;" class="preset-btn-group">
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Admin Dashboard Panel')">Admin Panel</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Content Management System (CMS)')">CMS Platform</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('User Authentication System')">Authentication</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Secure Login / Signup Portal')">Login Portal</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Interactive User Profiles')">User Profiles</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Role-Based Access Control (RBAC)')">Role Access Control</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Relational Database Integration')">Database Integration</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Customer Profile Database')">Customer DB</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Product Catalog Database')">Product DB</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Food/Menu Item Database')">Menu DB</button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="preset-category">
+                                        <div style="font-weight: 700; color: #ec4899; font-size: 0.8rem; margin-bottom: 0.4rem;">Media & Systems</div>
+                                        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;" class="preset-btn-group">
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Interactive Photo Gallery')">Photo Gallery</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Responsive Image Grid')">Image Gallery</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Video Streaming Player')">Video Gallery</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Push Notifications Service')">Push Notifications</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('SMTP Email Alerts System')">Email Alerts</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('SMS Gateway Integration')">SMS Notifications</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Cloud Image Upload storage')">Image Upload</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('File & Document Manager')">File Upload</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Live Chat Support Widget')">Live Chat</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Multi-Language Localization')">Multi-Language</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Elastic Website Search index')">Website Search</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Automated Daily Data Backup')">Data Backup</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Sleek Dark Mode toggle')">Dark Mode Toggle</button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="preset-category">
+                                        <div style="font-weight: 700; color: #ef4444; font-size: 0.8rem; margin-bottom: 0.4rem;">Setup, Operations & Support</div>
+                                        <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;" class="preset-btn-group">
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Domain Name Setup & DNS')">Domain Setup</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Cloud Server Hosting Deploy')">Hosting Setup</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Monthly Website Maintenance')">Website Maintenance</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Priority Technical Support contract')">Technical Support</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('CMS Training & Documentation manual')">CMS Training</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Speed & Performance Optimization')">Performance Opt</button>
+                                            <button type="button" class="btn-preset" onclick="addPresetItem('Fully Mobile Responsive Styling')">Responsive Design</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </details>
+
+                            <!-- Section: Dynamic Line Items -->
                             <div style="margin: 1.5rem 0 1rem 0; border-top: 1px solid var(--border-color); padding-top: 1rem;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                                    <label style="font-weight: 700;">Line Items</label>
+                                    <label style="font-weight: 700;">Invoice Line Items</label>
                                     <button type="button" class="btn btn-secondary" id="btn-invoice-add-item" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">
                                         <i data-lucide="plus" style="width: 14px; height: 14px;"></i> Add Item
                                     </button>
@@ -456,15 +706,50 @@
                                     <table class="dynamic-items-table">
                                         <thead>
                                             <tr>
-                                                <th style="width: 65%;">Service Description</th>
-                                                <th style="width: 25%; text-align: right;">Rate (₹)</th>
-                                                <th style="width: 10%; text-align: center;"></th>
+                                                <th style="width: 48%;">Billing Component</th>
+                                                <th style="width: 12%; text-align: center;">Qty</th>
+                                                <th style="width: 20%; text-align: right;">Unit Price (₹)</th>
+                                                <th style="width: 15%; text-align: right;">Total (₹)</th>
+                                                <th style="width: 5%; text-align: center;"></th>
                                             </tr>
                                         </thead>
                                         <tbody id="invoice-items-tbody">
-                                            <!-- Interactive lines injected here -->
+                                            <!-- Dynamic calculation rows injected here -->
                                         </tbody>
                                     </table>
+                                </div>
+                            </div>
+
+                            <!-- Section: Financial Summaries Panel -->
+                            <div style="background: rgba(0,0,0,0.15); border: 1px solid var(--border-color); padding: 1.25rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label for="invoice-discount">Discount Deductions (₹)</label>
+                                        <input type="number" id="invoice-discount" min="0" value="0" placeholder="0">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label for="invoice-tax">Tax Surcharges / GST (%)</label>
+                                        <input type="number" id="invoice-tax" min="0" value="0" placeholder="0">
+                                    </div>
+                                </div>
+                                
+                                <div style="display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.85rem; font-weight: 600;">
+                                    <div style="display: flex; justify-content: space-between; color: var(--text-secondary);">
+                                        <span>Subtotal:</span>
+                                        <span id="lbl-invoice-subtotal">₹0</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; color: var(--text-secondary);">
+                                        <span>Discount:</span>
+                                        <span id="lbl-invoice-discount">-₹0</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; color: var(--text-secondary);">
+                                        <span>Tax Surcharge:</span>
+                                        <span id="lbl-invoice-tax">+₹0</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; color: var(--text-primary); font-size: 1.05rem; font-weight: 800; border-top: 1px dashed var(--border-color); padding-top: 0.5rem; margin-top: 0.25rem;">
+                                        <span>Grand Total:</span>
+                                        <span id="lbl-invoice-grand-total">₹0</span>
+                                    </div>
                                 </div>
                             </div>
 
@@ -474,14 +759,50 @@
                                     <input type="number" id="invoice-paid" min="0" placeholder="e.g. 50000" value="0">
                                 </div>
                                 <div class="form-group">
-                                    <label for="invoice-due-date">Payment Due Date</label>
-                                    <input type="date" id="invoice-due-date">
+                                    <label>Net Balance Due (₹)</label>
+                                    <div style="padding: 0.7rem 1rem; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: var(--radius-md); font-weight: 700; color: #f59e0b; font-size: 0.95rem;" id="lbl-invoice-balance-due">
+                                        ₹0
+                                    </div>
                                 </div>
                             </div>
 
+                            <!-- Expandable Section: Payment Coordinates -->
+                            <details class="form-details" style="margin-bottom: 1.25rem;" open>
+                                <summary>
+                                    <span style="font-weight: 700; color: #10b981;">Payment Details</span>
+                                    <span style="font-size: 0.75rem; font-weight: normal; color: var(--text-muted); text-decoration: underline;">Configure settlement links</span>
+                                </summary>
+                                <div class="form-details-content" style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                                    <div class="form-group">
+                                        <label for="invoice-pay-mode">Payment Mode</label>
+                                        <select id="invoice-pay-mode" onchange="togglePaymentModeFields()">
+                                            <option value="UPI" selected>UPI Transfer</option>
+                                            <option value="Cash">Cash / Self Settlement</option>
+                                        </select>
+                                    </div>
+                                    <div id="invoice-upi-fields" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                                        <div class="form-group">
+                                            <label for="invoice-pay-upi">UPI Number</label>
+                                            <input type="text" id="invoice-pay-upi" value="8310311290">
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </details>
+
+                            <div class="form-group" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.25rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                    <label for="invoice-notes" style="margin-bottom: 0; font-weight: 700; color: var(--text-primary);">Settlement Reference Notes</label>
+                                    <input type="datetime-local" id="invoice-notes-datetime" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary); cursor: pointer; outline: none; width: auto; height: auto;">
+                                </div>
+                                <textarea id="invoice-notes" style="margin-bottom: 0;" placeholder="e.g. Please quote Invoice serial number in bank transfer remarks.">to be paid with in date: </textarea>
+                            </div>
+                            
                             <div class="form-group">
-                                <label for="invoice-notes">Terms of Settlement & Accounts coordinates</label>
-                                <textarea id="invoice-notes" placeholder="UPI IDs, Corporate Accounts numbers, or terms on interest charged for delayed payments."></textarea>
+                                <label for="invoice-terms">Terms & Conditions</label>
+                                <textarea id="invoice-terms" placeholder="Terms of agreement...">1. Payments should be made within the due date.
+2. Interest of 12% per annum may be charged on late payments.
+3. Goods or services once delivered are non-refundable.</textarea>
                             </div>
 
                             <div class="flex-end mt-4" style="display: flex; gap: 0.75rem;">
@@ -1070,9 +1391,95 @@
             document.querySelectorAll('.mobile-nav-item').forEach(el => el.classList.remove('active'));
             const mob = document.getElementById('mob-nav-' + hash);
             if (mob) mob.classList.add('active');
+
+            // On mobile phones: auto-switch generator sections to form-only view
+            if (window.innerWidth <= 540) {
+                if (hash === 'invoices' && typeof setInvoiceView === 'function') {
+                    setInvoiceView('form');
+                }
+                if (hash === 'agreements' && typeof setAgreementView === 'function') {
+                    setAgreementView('form');
+                }
+            }
         }
         window.addEventListener('hashchange', syncMobileNav);
+        // Also re-check on resize (e.g. user rotates phone)
+        window.addEventListener('resize', () => {
+            if (window.innerWidth <= 540) {
+                const hash = window.location.hash.substring(1) || 'dashboard';
+                if (hash === 'invoices' && typeof setInvoiceView === 'function') {
+                    setInvoiceView('form');
+                }
+                if (hash === 'agreements' && typeof setAgreementView === 'function') {
+                    setAgreementView('form');
+                }
+            }
+        });
         syncMobileNav();
     </script>
+    
+    <!-- Autocomplete suggestions for invoice deliverables -->
+    <datalist id="billing-items-list">
+        <option value="Landing Page"></option>
+        <option value="Hero Section"></option>
+        <option value="Navigation Bar"></option>
+        <option value="Footer"></option>
+        <option value="About Us Section"></option>
+        <option value="Our Story Section"></option>
+        <option value="Services Section"></option>
+        <option value="Features Section"></option>
+        <option value="Digital Menu Website"></option>
+        <option value="QR Menu System"></option>
+        <option value="Menu Categories Management"></option>
+        <option value="Menu Item Cards & Layout"></option>
+        <option value="Menu Search & Filter"></option>
+        <option value="Product Catalog Listing"></option>
+        <option value="Product Cards Grid"></option>
+        <option value="Featured Products Panel"></option>
+        <option value="Photo Gallery"></option>
+        <option value="Image Gallery"></option>
+        <option value="Video Gallery"></option>
+        <option value="Testimonials & Reviews"></option>
+        <option value="FAQ Section"></option>
+        <option value="Contact Page & Forms"></option>
+        <option value="Contact Form Validation"></option>
+        <option value="Business Inquiry Form"></option>
+        <option value="Business Location Map"></option>
+        <option value="Google Maps API Integration"></option>
+        <option value="WhatsApp API Integration"></option>
+        <option value="Call Now Action Button"></option>
+        <option value="Direct Email Contact API"></option>
+        <option value="Social Media Handle Icons"></option>
+        <option value="Newsletter Subscription Form"></option>
+        <option value="Blog & News Section"></option>
+        <option value="Admin Dashboard Panel"></option>
+        <option value="Content Management System (CMS)"></option>
+        <option value="User Authentication System"></option>
+        <option value="Secure Login / Signup Portal"></option>
+        <option value="Interactive User Profiles"></option>
+        <option value="Relational Database Integration"></option>
+        <option value="Customer Profile Database"></option>
+        <option value="Product Catalog Database"></option>
+        <option value="Food/Menu Item Database"></option>
+        <option value="Order Management System"></option>
+        <option value="Push Notifications Service"></option>
+        <option value="SMTP Email Alerts System"></option>
+        <option value="SMS Gateway Integration"></option>
+        <option value="Cloud Image Upload storage"></option>
+        <option value="File & Document Manager"></option>
+        <option value="Live Chat Support Widget"></option>
+        <option value="Multi-Language Localization"></option>
+        <option value="Elastic Website Search index"></option>
+        <option value="Automated Daily Data Backup"></option>
+        <option value="Role-Based Access Control (RBAC)"></option>
+        <option value="Speed & Performance Optimization"></option>
+        <option value="Fully Mobile Responsive Styling"></option>
+        <option value="Domain Name Setup & DNS"></option>
+        <option value="Cloud Server Hosting Deploy"></option>
+        <option value="Monthly Website Maintenance"></option>
+        <option value="Priority Technical Support contract"></option>
+        <option value="CMS Training & Documentation manual"></option>
+        <option value="Sleek Dark Mode toggle"></option>
+    </datalist>
 </body>
 </html>

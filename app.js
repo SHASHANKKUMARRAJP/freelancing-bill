@@ -114,15 +114,81 @@ async function syncFromSupabase() {
         maintenance: Number(a.maintenance),
         maintenancePeriod: a.maintenance_period
     }));
-    appState.invoices = (invoicesRes.data || []).map(i => ({
-        id: i.id,
-        clientId: i.client_id,
-        date: i.date,
-        dueDate: i.due_date,
-        items: typeof i.items === 'string' ? JSON.parse(i.items) : (i.items || []),
-        paid: Number(i.paid),
-        notes: i.notes
-    }));
+    appState.invoices = (invoicesRes.data || []).map(i => {
+        let itemsData = [];
+        let extraData = {};
+        try {
+            const parsed = typeof i.items === 'string' ? JSON.parse(i.items) : (i.items || {});
+            if (parsed && (parsed.invoice_items || parsed.items)) {
+                const parsedItems = parsed.invoice_items || parsed.items || [];
+                itemsData = parsedItems.map(it => ({
+                    description: it.description || it.service_name || "Service Item",
+                    amount: Number(it.amount) || (Number(it.quantity) * Number(it.unit_price)) || 0,
+                    service_name: it.service_name || it.description || "Service Item",
+                    quantity: Number(it.quantity) !== undefined && Number(it.quantity) !== null ? Number(it.quantity) : 1,
+                    unit_price: Number(it.unit_price) || Number(it.amount) || 0,
+                    total: Number(it.total) || Number(it.amount) || (Number(it.quantity) * Number(it.unit_price)) || 0
+                }));
+                extraData = parsed;
+            } else {
+                const arr = Array.isArray(parsed) ? parsed : [];
+                itemsData = arr.map(it => ({
+                    description: it.description || "Service Item",
+                    amount: Number(it.amount) || 0,
+                    service_name: it.description || "Service Item",
+                    quantity: 1,
+                    unit_price: Number(it.amount) || 0,
+                    total: Number(it.amount) || 0
+                }));
+            }
+        } catch (e) {
+            console.error("Failed to parse items json", e);
+        }
+
+        return {
+            id: i.id,
+            clientId: i.client_id,
+            date: i.date,
+            dueDate: i.due_date,
+            items: itemsData,
+            paid: Number(i.paid),
+            notes: i.notes,
+
+            // Extracted rich schema fields
+            invoice_id: extraData.invoice_id || i.id,
+            invoice_number: extraData.invoice_number || i.id,
+            invoice_date: extraData.invoice_date || i.date,
+            due_date: extraData.due_date || i.due_date,
+            status: extraData.status || (Number(i.paid) > 0 ? "Paid" : "Pending"),
+            company_details: extraData.company_details || {
+                company_name: "Pradraksha Groups",
+                address: "Pradraksha Towers, Sector 4, HSR Layout, Bangalore, Karnataka - 560102",
+                email: "finance@pradraksha.com",
+                phone: "+91 98765 43210",
+                website: "www.pradraksha.com"
+            },
+            client_details: extraData.client_details || null,
+            project_details: extraData.project_details || {
+                project_name: "",
+                project_type: "",
+                description: ""
+            },
+            invoice_items: itemsData,
+            subtotal: extraData.subtotal || itemsData.reduce((s, it) => s + it.total, 0),
+            discount: extraData.discount || 0,
+            tax: extraData.tax || 0,
+            grand_total: extraData.grand_total || itemsData.reduce((s, it) => s + it.total, 0),
+            payment_details: extraData.payment_details || {
+                payment_mode: "UPI",
+                upi_id: "8310311290",
+                payment_link: "https://upi.link/pradraksha"
+            },
+            terms_conditions: extraData.terms_conditions || "1. Payments should be made within the due date.\n2. Interest of 12% per annum may be charged on late payments.\n3. Goods or services once delivered are non-refundable.",
+            advance_received: Number(i.paid),
+            balance_due: extraData.balance_due !== undefined ? extraData.balance_due : Math.max(0, (extraData.grand_total || itemsData.reduce((s, it) => s + it.total, 0)) - Number(i.paid)),
+            created_at: extraData.created_at || new Date().toISOString()
+        };
+    });
     appState.payments = (paymentsRes.data || []).map(p => ({
         id: p.id,
         clientId: p.client_id,
@@ -207,11 +273,31 @@ function mapAgreementToDB(agree) {
 function mapInvoiceToDB(inv) {
     return {
         id: inv.id,
-        client_id: inv.clientId,
-        date: inv.date,
-        due_date: inv.dueDate,
-        items: inv.items,
-        paid: Number(inv.paid),
+        client_id: inv.clientId || (inv.client_details ? inv.client_details.id : null),
+        date: inv.invoice_date || inv.date,
+        due_date: inv.due_date || inv.dueDate,
+        items: JSON.stringify({
+            invoice_id: inv.invoice_id || inv.id,
+            invoice_number: inv.invoice_number || inv.id,
+            invoice_date: inv.invoice_date || inv.date,
+            due_date: inv.due_date || inv.dueDate,
+            status: inv.status || "Pending",
+            company_details: inv.company_details,
+            client_details: inv.client_details,
+            project_details: inv.project_details,
+            invoice_items: inv.invoice_items || inv.items,
+            subtotal: inv.subtotal,
+            discount: inv.discount,
+            tax: inv.tax,
+            grand_total: inv.grand_total,
+            payment_details: inv.payment_details,
+            notes: inv.notes,
+            terms_conditions: inv.terms_conditions,
+            advance_received: inv.advance_received || inv.paid,
+            balance_due: inv.balance_due,
+            created_at: inv.created_at || new Date().toISOString()
+        }),
+        paid: Number(inv.advance_received !== undefined ? inv.advance_received : inv.paid),
         notes: inv.notes
     };
 }
@@ -371,46 +457,357 @@ function getClientFinancials(clientId) {
 function updateTelemetryWidgets() {
     // Pipeline totals
     let totalPipeline = 0;
-    appState.agreements.forEach(agr => totalPipeline += Number(agr.cost));
+    (appState.agreements || []).forEach(agr => totalPipeline += Number(agr.cost));
     
     let totalCollected = 0;
-    appState.payments.forEach(pay => totalCollected += Number(pay.amount));
+    (appState.payments || []).forEach(pay => totalCollected += Number(pay.amount));
     
     const outstanding = totalPipeline - totalCollected;
-    const clientCount = appState.clients.length;
+    const clientCount = (appState.clients || []).length;
     
     // Invoices Ledger Calculations (Flat, no GST)
     let ledgerTotalBilled = 0;
-    appState.invoices.forEach(inv => {
-        const subtotal = inv.items.reduce((s, item) => s + Number(item.amount), 0);
+    (appState.invoices || []).forEach(inv => {
+        const subtotal = (inv.items || []).reduce((s, item) => s + Number(item.amount), 0);
         ledgerTotalBilled += subtotal;
     });
     
     const ledgerTotalPending = ledgerTotalBilled - totalCollected;
     
     // Inject values
-    document.getElementById('val-total-pipeline').textContent = formatCurrency(totalPipeline);
-    document.getElementById('val-total-collected').textContent = formatCurrency(totalCollected);
-    document.getElementById('val-total-outstanding').textContent = formatCurrency(outstanding);
-    document.getElementById('val-client-count').textContent = clientCount;
+    const pipelineEl = document.getElementById('val-total-pipeline');
+    if (pipelineEl) pipelineEl.textContent = formatCurrency(totalPipeline);
+    
+    const collectedEl = document.getElementById('val-total-collected');
+    if (collectedEl) collectedEl.textContent = formatCurrency(totalCollected);
+    
+    const outstandingEl = document.getElementById('val-total-outstanding');
+    if (outstandingEl) outstandingEl.textContent = formatCurrency(outstanding);
+    
+    const clientCountEl = document.getElementById('val-client-count');
+    if (clientCountEl) clientCountEl.textContent = clientCount;
     
     const percent = totalPipeline > 0 ? Math.round((totalCollected / totalPipeline) * 100) : 0;
-    document.getElementById('val-percent-collected').textContent = `${percent}% of portfolio value`;
+    const percentCollectedEl = document.getElementById('val-percent-collected');
+    if (percentCollectedEl) percentCollectedEl.textContent = `${percent}% of portfolio value`;
     
     // Count unpaid invoices (flat grand total)
-    const unpaidCount = appState.invoices.filter(i => {
-        const grandTotal = i.items.reduce((s, it) => s + Number(it.amount), 0);
+    const unpaidCount = (appState.invoices || []).filter(i => {
+        const grandTotal = (i.items || []).reduce((s, it) => s + Number(it.amount), 0);
         return i.paid < grandTotal;
     }).length;
-    document.getElementById('val-pending-count').textContent = `${unpaidCount} unpaid invoices`;
+    const pendingCountEl = document.getElementById('val-pending-count');
+    if (pendingCountEl) pendingCountEl.textContent = `${unpaidCount} unpaid invoices`;
 
     // Ledger View widgets
-    document.getElementById('ledger-total-billed').textContent = formatCurrency(ledgerTotalBilled);
-    document.getElementById('ledger-total-collected').textContent = formatCurrency(totalCollected);
-    document.getElementById('ledger-total-pending').textContent = formatCurrency(Math.max(0, ledgerTotalPending));
+    const billedLedgerEl = document.getElementById('ledger-total-billed');
+    if (billedLedgerEl) billedLedgerEl.textContent = formatCurrency(ledgerTotalBilled);
+    
+    const collectedLedgerEl = document.getElementById('ledger-total-collected');
+    if (collectedLedgerEl) collectedLedgerEl.textContent = formatCurrency(totalCollected);
+    
+    const pendingLedgerEl = document.getElementById('ledger-total-pending');
+    if (pendingLedgerEl) pendingLedgerEl.textContent = formatCurrency(Math.max(0, ledgerTotalPending));
+    
     const ledgerPercent = ledgerTotalBilled > 0 ? Math.round((totalCollected / ledgerTotalBilled) * 100) : 0;
-    document.getElementById('ledger-percent-collected').textContent = `${ledgerPercent}% collection rate`;
+    const ledgerPercentEl = document.getElementById('ledger-percent-collected');
+    if (ledgerPercentEl) ledgerPercentEl.textContent = `${ledgerPercent}% collection rate`;
+
+    // Modern greeting logic
+    const greetingTitleEl = document.getElementById('greeting-title');
+    const greetingInsightEl = document.getElementById('greeting-insight');
+    if (greetingTitleEl) {
+        const hour = new Date().getHours();
+        let greeting = "Welcome back, Operator";
+        if (hour < 12) greeting = "Good Morning, Operator";
+        else if (hour < 17) greeting = "Good Afternoon, Operator";
+        else greeting = "Good Evening, Operator";
+        greetingTitleEl.textContent = greeting;
+    }
+    if (greetingInsightEl) {
+        const dbStatus = supabaseClient ? "Supabase Cloud Database connected and in sync." : "Offline Mode active: caching operations locally in browser.";
+        greetingInsightEl.textContent = `You have registered ${clientCount} corporate client partners. ${dbStatus}`;
+    }
+
+    // Circular gauge updates
+    const gaugeValueText = document.getElementById('gauge-value-text');
+    const gaugeCircleFg = document.getElementById('gauge-circle-fg');
+    const gaugeDetailText = document.getElementById('gauge-detail-text');
+    
+    const rate = ledgerTotalBilled > 0 ? Math.round((totalCollected / ledgerTotalBilled) * 100) : 0;
+    
+    if (gaugeValueText) {
+        gaugeValueText.textContent = `${rate}%`;
+    }
+    if (gaugeCircleFg) {
+        // Circumference of r=28 is 175.93
+        const circumference = 175.929;
+        const offset = Math.max(0, Math.min(circumference, circumference * (1 - rate / 100)));
+        gaugeCircleFg.style.strokeDashoffset = offset;
+    }
+    if (gaugeDetailText) {
+        gaugeDetailText.textContent = `${formatCurrency(totalCollected)} Collected`;
+    }
+
+    // Render interactive SVG telemetry chart
+    renderDashboardChart();
 }
+
+function renderDashboardChart() {
+    const svg = document.getElementById('dashboard-chart-svg');
+    if (!svg) return;
+
+    // Determine last 6 months
+    const months = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const year = d.getFullYear();
+        const monthNum = String(d.getMonth() + 1).padStart(2, '0');
+        const label = d.toLocaleDateString('en-IN', { month: 'short' });
+        months.push({
+            key: `${year}-${monthNum}`,
+            label: label,
+            year: year,
+            month: d.getMonth()
+        });
+    }
+
+    const billedByMonth = Array(6).fill(0);
+    const collectedByMonth = Array(6).fill(0);
+
+    // Group Invoiced Amounts
+    (appState.invoices || []).forEach(inv => {
+        if (!inv.date) return;
+        const invDate = new Date(inv.date);
+        const y = invDate.getFullYear();
+        const m = String(invDate.getMonth() + 1).padStart(2, '0');
+        const key = `${y}-${m}`;
+        const index = months.findIndex(item => item.key === key);
+        if (index > -1) {
+            const subtotal = (inv.items || []).reduce((s, item) => s + Number(item.amount), 0);
+            billedByMonth[index] += subtotal;
+        }
+    });
+
+    // Group Recorded Collections
+    (appState.payments || []).forEach(pay => {
+        if (!pay.date) return;
+        const payDate = new Date(pay.date);
+        const y = payDate.getFullYear();
+        const m = String(payDate.getMonth() + 1).padStart(2, '0');
+        const key = `${y}-${m}`;
+        const index = months.findIndex(item => item.key === key);
+        if (index > -1) {
+            collectedByMonth[index] += Number(pay.amount);
+        }
+    });
+
+    // If both billed and collected are zero for all months, add some mock seed visuals so the chart looks nice
+    const hasData = billedByMonth.some(v => v > 0) || collectedByMonth.some(v => v > 0);
+    let chartBilled = [...billedByMonth];
+    let chartCollected = [...collectedByMonth];
+
+    if (!hasData) {
+        // Mock data representing standard billing operations
+        chartBilled = [15000, 45000, 25000, 60000, 40000, 75000];
+        chartCollected = [10000, 35000, 20000, 50000, 30000, 65000];
+    }
+
+    const maxVal = Math.max(10000, ...chartBilled, ...chartCollected);
+
+    // Margins and Dimensions
+    const width = 600;
+    const height = 240;
+    const padLeft = 65;
+    const padRight = 20;
+    const padTop = 25;
+    const padBottom = 35;
+
+    const drawW = width - padLeft - padRight;
+    const drawH = height - padTop - padBottom;
+
+    const pointsX = [];
+    const pointsYBilled = [];
+    const pointsYCollected = [];
+
+    for (let i = 0; i < 6; i++) {
+        const x = padLeft + (i * (drawW / 5));
+        const yBilled = height - padBottom - (chartBilled[i] / maxVal * drawH);
+        const yCollected = height - padBottom - (chartCollected[i] / maxVal * drawH);
+
+        pointsX.push(x);
+        pointsYBilled.push(yBilled);
+        pointsYCollected.push(yCollected);
+    }
+
+    // SVG Helper to interpolate Bézier curve
+    function getBezierPath(xArr, yArr) {
+        if (xArr.length === 0) return "";
+        let path = `M ${xArr[0]} ${yArr[0]}`;
+        for (let i = 0; i < xArr.length - 1; i++) {
+            const xMid = (xArr[i] + xArr[i+1]) / 2;
+            path += ` C ${xMid} ${yArr[i]}, ${xMid} ${yArr[i+1]}, ${xArr[i+1]} ${yArr[i+1]}`;
+        }
+        return path;
+    }
+
+    const billedPath = getBezierPath(pointsX, pointsYBilled);
+    const collectedPath = getBezierPath(pointsX, pointsYCollected);
+
+    const billedArea = `${billedPath} L ${pointsX[5]} ${height - padBottom} L ${pointsX[0]} ${height - padBottom} Z`;
+    const collectedArea = `${collectedPath} L ${pointsX[5]} ${height - padBottom} L ${pointsX[0]} ${height - padBottom} Z`;
+
+    // Clear everything except defs
+    const defs = svg.querySelector('defs');
+    svg.innerHTML = '';
+    if (defs) {
+        svg.appendChild(defs);
+    }
+
+    // 1. Gridlines and Y-axis labels
+    const gridCount = 4;
+    for (let i = 0; i <= gridCount; i++) {
+        const fraction = i / gridCount;
+        const val = fraction * maxVal;
+        const y = height - padBottom - (fraction * drawH);
+        
+        // Gridline
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", padLeft);
+        line.setAttribute("y1", y);
+        line.setAttribute("x2", width - padRight);
+        line.setAttribute("y2", y);
+        line.setAttribute("class", "chart-grid-line");
+        svg.appendChild(line);
+
+        // Y label
+        const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        txt.setAttribute("x", padLeft - 10);
+        txt.setAttribute("y", y + 4);
+        txt.setAttribute("text-anchor", "end");
+        txt.setAttribute("class", "chart-axis-label");
+        
+        // Compact notation for large numbers
+        let formattedVal = "";
+        if (val >= 100000) formattedVal = '₹' + (val / 100000).toFixed(1) + 'L';
+        else if (val >= 1000) formattedVal = '₹' + (val / 1000).toFixed(0) + 'k';
+        else formattedVal = '₹' + val;
+        
+        txt.textContent = formattedVal;
+        svg.appendChild(txt);
+    }
+
+    // 2. X-axis Labels (Months)
+    for (let i = 0; i < 6; i++) {
+        const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        txt.setAttribute("x", pointsX[i]);
+        txt.setAttribute("y", height - 10);
+        txt.setAttribute("text-anchor", "middle");
+        txt.setAttribute("class", "chart-axis-label");
+        txt.textContent = months[i].label;
+        svg.appendChild(txt);
+    }
+
+    // 3. Draw Areas
+    const areaB = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    areaB.setAttribute("d", billedArea);
+    areaB.setAttribute("fill", "url(#revenue-gradient)");
+    areaB.setAttribute("opacity", "0.25");
+    svg.appendChild(areaB);
+
+    const areaC = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    areaC.setAttribute("d", collectedArea);
+    areaC.setAttribute("fill", "url(#collected-gradient)");
+    areaC.setAttribute("opacity", "0.25");
+    svg.appendChild(areaC);
+
+    // 4. Draw Lines
+    const lineB = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    lineB.setAttribute("d", billedPath);
+    lineB.setAttribute("fill", "none");
+    lineB.setAttribute("stroke", "var(--primary)");
+    lineB.setAttribute("stroke-width", "3.5");
+    lineB.setAttribute("stroke-linecap", "round");
+    lineB.style.filter = "drop-shadow(0 4px 10px rgba(99, 102, 241, 0.35))";
+    svg.appendChild(lineB);
+
+    const lineC = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    lineC.setAttribute("d", collectedPath);
+    lineC.setAttribute("fill", "none");
+    lineC.setAttribute("stroke", "var(--success)");
+    lineC.setAttribute("stroke-width", "3.5");
+    lineC.setAttribute("stroke-linecap", "round");
+    lineC.style.filter = "drop-shadow(0 4px 10px rgba(16, 185, 129, 0.35))";
+    svg.appendChild(lineC);
+
+    // 5. Draw Interactive Nodes
+    for (let i = 0; i < 6; i++) {
+        // Billed Circle
+        const circB = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        circB.setAttribute("cx", pointsX[i]);
+        circB.setAttribute("cy", pointsYBilled[i]);
+        circB.setAttribute("r", "5");
+        circB.setAttribute("class", "chart-point-revenue");
+        circB.style.transition = "r var(--transition-fast)";
+        
+        bindTooltip(circB, months[i].label, "Invoiced", chartBilled[i], "var(--primary)", hasData);
+        svg.appendChild(circB);
+
+        // Collected Circle
+        const circC = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        circC.setAttribute("cx", pointsX[i]);
+        circC.setAttribute("cy", pointsYCollected[i]);
+        circC.setAttribute("r", "5");
+        circC.setAttribute("class", "chart-point-collected");
+        circC.style.transition = "r var(--transition-fast)";
+        
+        bindTooltip(circC, months[i].label, "Collected", chartCollected[i], "var(--success)", hasData);
+        svg.appendChild(circC);
+    }
+}
+
+function bindTooltip(circle, month, type, amount, color, hasRealData) {
+    const tooltip = document.getElementById('chart-tooltip');
+    if (!tooltip) return;
+
+    circle.addEventListener('mouseenter', (e) => {
+        circle.setAttribute("r", "7.5");
+        
+        const dataNote = hasRealData ? "" : " <span style='font-style:italic; opacity:0.6;'>(Mock Data)</span>";
+        tooltip.innerHTML = `
+            <div style="font-weight: 700; color: var(--text-secondary); margin-bottom: 0.25rem;">${month} 2026${dataNote}</div>
+            <div style="display:flex; align-items:center; gap: 0.35rem; font-weight:700;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: ${color}; display:inline-block;"></span>
+                <span>${type}: <b>${formatCurrency(amount)}</b></span>
+            </div>
+        `;
+        tooltip.style.display = 'block';
+    });
+
+    circle.addEventListener('mousemove', (e) => {
+        const containerRect = circle.ownerSVGElement.parentNode.getBoundingClientRect();
+        const tooltipW = tooltip.offsetWidth;
+        const tooltipH = tooltip.offsetHeight;
+        
+        // Calculate offset relative to chart-container
+        const x = e.clientX - containerRect.left + 15;
+        const y = e.clientY - containerRect.top - tooltipH - 10;
+        
+        // Keep within bounds
+        const finalX = x + tooltipW > containerRect.width ? x - tooltipW - 30 : x;
+        const finalY = y < 0 ? y + tooltipH + 30 : y;
+        
+        tooltip.style.left = `${finalX}px`;
+        tooltip.style.top = `${finalY}px`;
+    });
+
+    circle.addEventListener('mouseleave', () => {
+        circle.setAttribute("r", "5");
+        tooltip.style.display = 'none';
+    });
+}
+
 
 // --- 4. RENDER SYSTEM SECTIONS ---
 
@@ -714,11 +1111,24 @@ function switchDetailTab(tabName) {
         
         clientInvoices.forEach(inv => {
             const tr = document.createElement('tr');
-            const grandTotal = inv.items.reduce((s, i) => s + i.amount, 0);
-            const status = inv.paid >= grandTotal ? '<span class="badge badge-paid" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">Paid</span>' : (inv.paid > 0 ? '<span class="badge badge-partial" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">Partial</span>' : '<span class="badge badge-unpaid" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">Unpaid</span>');
+            const grandTotal = inv.grand_total !== undefined ? inv.grand_total : inv.items.reduce((s, i) => s + i.amount, 0);
+            let statusBadge = '';
+            if (inv.status) {
+                if (inv.status === 'Paid') {
+                    statusBadge = '<span class="badge badge-paid" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">Paid</span>';
+                } else if (inv.status === 'Pending') {
+                    statusBadge = '<span class="badge badge-partial" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">Pending</span>';
+                } else if (inv.status === 'Overdue') {
+                    statusBadge = '<span class="badge badge-unpaid" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">Overdue</span>';
+                } else {
+                    statusBadge = '<span class="badge badge-type" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">Draft</span>';
+                }
+            } else {
+                statusBadge = inv.paid >= grandTotal ? '<span class="badge badge-paid" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">Paid</span>' : (inv.paid > 0 ? '<span class="badge badge-partial" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">Partial</span>' : '<span class="badge badge-unpaid" style="padding: 0.15rem 0.4rem; font-size: 0.65rem;">Unpaid</span>');
+            }
             tr.innerHTML = `
                 <td><span class="badge badge-partial">Invoice</span></td>
-                <td>${inv.id} ${status}</td>
+                <td>${inv.id} ${statusBadge}</td>
                 <td>₹${grandTotal.toLocaleString()}</td>
                 <td class="text-right"><button class="btn btn-secondary" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="triggerDocumentDownload('invoice', '${inv.id}')">View</button></td>
             `;
@@ -929,7 +1339,132 @@ function initDynamicRows(tbodyId, addBtnId, isInvoice = false) {
     return { addRow };
 }
 
-const invoiceTable = initDynamicRows('invoice-items-tbody', 'btn-invoice-add-item', false);
+function calculateInvoiceFormTotals() {
+    let subtotal = 0;
+    document.querySelectorAll('#invoice-items-tbody tr').forEach(tr => {
+        const qtyInput = tr.querySelector('.item-qty');
+        const priceInput = tr.querySelector('.item-price');
+        const qty = qtyInput ? (Number(qtyInput.value) || 0) : 0;
+        const price = priceInput ? (Number(priceInput.value) || 0) : 0;
+        subtotal += qty * price;
+    });
+    
+    const discount = Number(document.getElementById('invoice-discount')?.value) || 0;
+    const taxPercent = Number(document.getElementById('invoice-tax')?.value) || 0;
+    const taxAmount = (subtotal - discount) * (taxPercent / 100);
+    const grandTotal = Math.max(0, (subtotal - discount) + taxAmount);
+    const paid = Number(document.getElementById('invoice-paid')?.value) || 0;
+    const balanceDue = Math.max(0, grandTotal - paid);
+    
+    // Update labels
+    const subtotalEl = document.getElementById('lbl-invoice-subtotal');
+    if (subtotalEl) subtotalEl.textContent = `₹${subtotal.toLocaleString('en-IN')}`;
+    
+    const discountEl = document.getElementById('lbl-invoice-discount');
+    if (discountEl) discountEl.textContent = `-₹${discount.toLocaleString('en-IN')}`;
+    
+    const taxEl = document.getElementById('lbl-invoice-tax');
+    if (taxEl) taxEl.textContent = `+₹${taxAmount.toLocaleString('en-IN')}`;
+    
+    const grandTotalEl = document.getElementById('lbl-invoice-grand-total');
+    if (grandTotalEl) grandTotalEl.textContent = `₹${grandTotal.toLocaleString('en-IN')}`;
+    
+    const balanceDueEl = document.getElementById('lbl-invoice-balance-due');
+    if (balanceDueEl) balanceDueEl.textContent = `₹${balanceDue.toLocaleString('en-IN')}`;
+}
+
+function initInvoiceItemsTable(tbodyId, addBtnId) {
+    const tbody = document.getElementById(tbodyId);
+    const btn = document.getElementById(addBtnId);
+    
+    function addRow(service = "", qty = 1, price = "") {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><input type="text" class="item-name" list="billing-items-list" placeholder="Describe billing component..." value="${service}" required></td>
+            <td><input type="number" class="item-qty" min="1" placeholder="1" value="${qty}" required style="text-align: center;"></td>
+            <td><input type="number" class="item-price" min="0" placeholder="0" value="${price}" required style="text-align: right;"></td>
+            <td style="text-align: right; font-weight: 600;"><span class="item-total">₹0</span></td>
+            <td style="text-align: center;"><button type="button" class="item-delete-btn">&times;</button></td>
+        `;
+        
+        const qtyInput = tr.querySelector('.item-qty');
+        const priceInput = tr.querySelector('.item-price');
+        const totalSpan = tr.querySelector('.item-total');
+        
+        function updateRowTotal() {
+            const q = Number(qtyInput.value) || 0;
+            const p = Number(priceInput.value) || 0;
+            const t = q * p;
+            totalSpan.textContent = `₹${t.toLocaleString('en-IN')}`;
+            calculateInvoiceFormTotals();
+        }
+        
+        qtyInput.addEventListener('input', updateRowTotal);
+        priceInput.addEventListener('input', updateRowTotal);
+        
+        tr.querySelector('.item-delete-btn').onclick = () => {
+            tr.remove();
+            if (tbody.children.length === 0) addRow("", 1, "");
+            calculateInvoiceFormTotals();
+        };
+        
+        tbody.appendChild(tr);
+        updateRowTotal();
+    }
+    
+    if (btn) {
+        btn.onclick = () => addRow("", 1, "");
+    }
+    
+    if (tbody && tbody.children.length === 0) {
+        addRow("", 1, "");
+    }
+    
+    return { addRow };
+}
+
+const invoiceTable = initInvoiceItemsTable('invoice-items-tbody', 'btn-invoice-add-item');
+
+function addPresetItem(name) {
+    const tbody = document.getElementById('invoice-items-tbody');
+    if (!tbody) return;
+    
+    // Check if there is already an empty row in the table to reuse
+    let emptyRow = null;
+    const rows = tbody.querySelectorAll('tr');
+    for (let i = 0; i < rows.length; i++) {
+        const tr = rows[i];
+        const nameInput = tr.querySelector('.item-name');
+        const priceInput = tr.querySelector('.item-price');
+        if (nameInput && !nameInput.value && priceInput && !priceInput.value) {
+            emptyRow = tr;
+            break;
+        }
+    }
+    
+    if (emptyRow) {
+        const nameInput = emptyRow.querySelector('.item-name');
+        nameInput.value = name;
+        const qtyInput = emptyRow.querySelector('.item-qty');
+        if (qtyInput) qtyInput.value = 1;
+        const priceInput = emptyRow.querySelector('.item-price');
+        if (priceInput) priceInput.focus();
+        // Update row total
+        const event = new Event('input');
+        if (priceInput) priceInput.dispatchEvent(event);
+    } else {
+        // Add a new row using invoiceTable
+        invoiceTable.addRow(name, 1, "");
+        // Focus price field on the last row
+        const newRows = tbody.querySelectorAll('tr');
+        if (newRows.length > 0) {
+            const lastRow = newRows[newRows.length - 1];
+            const priceInput = lastRow.querySelector('.item-price');
+            if (priceInput) priceInput.focus();
+        }
+    }
+}
+window.addPresetItem = addPresetItem;
 
 // --- 8. DYNAMIC PDF GENERATORS ---
 
@@ -1316,31 +1851,118 @@ document.getElementById('invoice-form').addEventListener('submit', function(e) {
     
     const invoiceNum = document.getElementById('invoice-num').value;
     const invoiceDate = document.getElementById('invoice-date').value;
+    const dueDate = document.getElementById('invoice-due-date').value;
+    const status = document.getElementById('invoice-status').value;
+    
+    // Company details
+    const company_details = {
+        company_name: document.getElementById('invoice-co-name').value,
+        address: document.getElementById('invoice-co-address').value,
+        email: document.getElementById('invoice-co-email').value,
+        phone: document.getElementById('invoice-co-phone').value,
+        website: document.getElementById('invoice-co-website').value
+    };
+    
+    // Client selection
     const clientId = document.getElementById('invoice-client-select').value;
     const client = appState.clients.find(c => c.id === clientId);
-    if (!client) return;
+    if (!client) {
+        alert("Please select a client.");
+        return;
+    }
     
-    const paid = Number(document.getElementById('invoice-paid').value);
-    const dueDate = document.getElementById('invoice-due-date').value;
-    const notes = document.getElementById('invoice-notes').value;
+    const client_details = {
+        id: client.id,
+        client_name: client.name,
+        business_name: client.business,
+        email: client.email,
+        phone: client.phone,
+        address: client.address
+    };
     
-    const items = [];
+    // Project details
+    const project_details = {
+        project_name: document.getElementById('invoice-proj-name').value,
+        project_type: document.getElementById('invoice-proj-type').value,
+        description: document.getElementById('invoice-proj-desc').value
+    };
+    
+    // Invoice items
+    const invoice_items = [];
     document.querySelectorAll('#invoice-items-tbody tr').forEach(tr => {
-        const desc = tr.querySelector('.item-name').value;
-        const amt = Number(tr.querySelector('.item-amount').value);
-        if (desc && amt) items.push({ description: desc, amount: amt });
+        const service_name = tr.querySelector('.item-name').value;
+        const quantity = Number(tr.querySelector('.item-qty').value) || 1;
+        const unit_price = Number(tr.querySelector('.item-price').value) || 0;
+        const total = quantity * unit_price;
+        
+        if (service_name) {
+            invoice_items.push({
+                service_name,
+                quantity,
+                unit_price,
+                total
+            });
+        }
     });
     
-    if (items.length === 0) {
+    if (invoice_items.length === 0) {
         alert("Please add at least one line item.");
         return;
     }
     
-    const existingIndex = appState.invoices.findIndex(i => i.id === invoiceNum);
+    // Financials
+    let subtotal = invoice_items.reduce((s, it) => s + it.total, 0);
+    const discount = Number(document.getElementById('invoice-discount').value) || 0;
+    const taxPercent = Number(document.getElementById('invoice-tax').value) || 0;
+    const taxAmount = (subtotal - discount) * (taxPercent / 100);
+    const grand_total = Math.max(0, (subtotal - discount) + taxAmount);
+    const advance_received = Number(document.getElementById('invoice-paid').value) || 0;
+    const balance_due = Math.max(0, grand_total - advance_received);
+    const notes = document.getElementById('invoice-notes').value;
+    const terms_conditions = document.getElementById('invoice-terms').value;
+    
+    // Build legacy items array for compatibility
+    const items = invoice_items.map(it => ({
+        description: it.service_name,
+        amount: it.total
+    }));
+    
     const updatedInvoice = {
-        id: invoiceNum, clientId, date: invoiceDate, dueDate, items, paid, notes
+        id: invoiceNum,
+        clientId,
+        date: invoiceDate,
+        dueDate,
+        items,
+        paid: advance_received,
+        notes,
+        
+        // Rich fields
+        invoice_id: invoiceNum,
+        invoice_number: invoiceNum,
+        invoice_date: invoiceDate,
+        status,
+        company_details,
+        client_details,
+        project_details,
+        invoice_items,
+        subtotal,
+        discount,
+        tax: taxPercent,
+        grand_total,
+        payment_details: {
+            payment_mode: document.getElementById('invoice-pay-mode').value,
+            upi_id: document.getElementById('invoice-pay-upi').value,
+            payment_link: document.getElementById('invoice-pay-link').value
+        },
+        terms_conditions,
+        advance_received,
+        balance_due,
+        created_at: new Date().toISOString()
     };
+    
+    const existingIndex = appState.invoices.findIndex(i => i.id === invoiceNum);
     if (existingIndex > -1) {
+        updatedInvoice.created_at = appState.invoices[existingIndex].created_at || updatedInvoice.created_at;
         appState.invoices[existingIndex] = updatedInvoice;
         logActivity(`Updated invoice registry for invoice ${invoiceNum}`, 'doc');
     } else {
@@ -1355,7 +1977,7 @@ document.getElementById('invoice-form').addEventListener('submit', function(e) {
     saveState();
     showToast(`Invoice ${invoiceNum} logged.`, 'success');
     
-    const paper = assembleInvoiceHTML(invoiceNum, client, invoiceDate, dueDate, items, paid, notes);
+    const paper = assembleInvoiceHTML(updatedInvoice);
     const viewport = document.getElementById('invoice-pdf-viewport');
     viewport.innerHTML = '';
     viewport.appendChild(paper);
@@ -1367,63 +1989,201 @@ document.getElementById('invoice-form').addEventListener('submit', function(e) {
 });
 
 function assembleInvoiceHTML(id, client, date, dueDate, items, paid, notes) {
-    const subtotal = items.reduce((s, it) => s + it.amount, 0);
-    const grandTotal = subtotal;
-    const balance = grandTotal - paid;
+    let inv = {};
+    if (typeof id === 'object' && id !== null) {
+        inv = { ...id }; // Clone to avoid mutating in-memory state
+    } else {
+        inv = {
+            id: id,
+            invoice_number: id,
+            invoice_date: date,
+            date: date,
+            due_date: dueDate,
+            dueDate: dueDate,
+            invoice_items: (items || []).map(it => ({
+                service_name: it.description || "Service Item",
+                quantity: 1,
+                unit_price: it.amount || 0,
+                total: it.amount || 0
+            })),
+            subtotal: (items || []).reduce((s, it) => s + it.amount, 0),
+            discount: 0,
+            tax: 0,
+            grand_total: (items || []).reduce((s, it) => s + it.amount, 0),
+            advance_received: paid || 0,
+            balance_due: ((items || []).reduce((s, it) => s + it.amount, 0)) - (paid || 0),
+            notes: notes || "",
+            status: "Pending",
+            company_details: {
+                company_name: "Pradraksha Groups",
+                address: "Pradraksha Towers, HSR Layout, Sector 4, Bangalore 560102",
+                email: "finance@pradraksha.com",
+                phone: "+91 98765 43210",
+                website: "www.pradraksha.com"
+            },
+            client_details: client ? {
+                business_name: client.business,
+                client_name: client.name,
+                address: client.address,
+                email: client.email,
+                phone: client.phone
+            } : null,
+            project_details: {
+                project_name: "Service Delivery",
+                project_type: "Digital Services",
+                description: "Digital web services and setup"
+            },
+            payment_details: {
+                payment_mode: "UPI",
+                upi_id: "8310311290",
+                payment_link: "https://upi.link/pradraksha"
+            },
+            terms_conditions: "1. Payments should be made within the due date.\n2. Interest of 12% per annum may be charged on late payments.\n3. Goods or services once delivered are non-refundable."
+        };
+    }
+
+    // Resolve client details if missing but clientId is present
+    if (!inv.client_details && (client || inv.clientId)) {
+        const resolveClient = client || appState.clients.find(c => c.id === inv.clientId);
+        if (resolveClient) {
+            inv.client_details = {
+                business_name: resolveClient.business || resolveClient.business_name || "Corporate Client",
+                client_name: resolveClient.name || resolveClient.client_name || "",
+                address: resolveClient.address || "",
+                email: resolveClient.email || "",
+                phone: resolveClient.phone || ""
+            };
+        }
+    }
+
+    // Resolve items list if invoice_items is missing/empty but legacy items is present
+    if ((!inv.invoice_items || inv.invoice_items.length === 0) && inv.items) {
+        inv.invoice_items = inv.items.map(it => ({
+            service_name: it.description || it.service_name || "Service Item",
+            quantity: it.quantity !== undefined ? it.quantity : 1,
+            unit_price: it.unit_price !== undefined ? it.unit_price : (it.amount || 0),
+            total: it.total !== undefined ? it.total : (it.amount || 0)
+        }));
+    }
+
+    const subtotal = inv.subtotal || 0;
+    const discount = inv.discount || 0;
+    const taxPercent = inv.tax || 0;
+    const taxAmount = (subtotal - discount) * (taxPercent / 100);
+    const grandTotal = inv.grand_total || (subtotal - discount + taxAmount);
+    const paidVal = inv.advance_received !== undefined ? inv.advance_received : (inv.paid || 0);
+    const balance = inv.balance_due !== undefined ? inv.balance_due : Math.max(0, grandTotal - paidVal);
+    
+    const pDetails = inv.payment_details || {};
+    const payMode = pDetails.payment_mode || (pDetails.bank_name ? "Bank" : "UPI");
+    let paymentInstructionsHTML = "";
+    if (payMode === "Cash") {
+        paymentInstructionsHTML = `
+            <div>Settlement Mode: <b>Cash / Self Settlement</b></div>
+            <div style="color: #475569; margin-top: 4px;">Please settle the invoice amount directly in cash or offline physical transfer.</div>
+        `;
+    } else if (payMode === "Bank") {
+        paymentInstructionsHTML = `
+            <div>Bank Name: <b>${pDetails.bank_name || ''}</b></div>
+            <div>Account No: <b>${pDetails.account_number || ''}</b></div>
+            <div>IFSC Code: <b>${pDetails.ifsc || ''}</b></div>
+            ${pDetails.upi_id ? `<div>UPI ID: <b>${pDetails.upi_id}</b></div>` : ''}
+            ${pDetails.payment_link ? `<div style="margin-top: 6px;"><b>Gateway Link:</b> <a href="${pDetails.payment_link}" target="_blank" style="color: #2563eb; text-decoration: underline;">${pDetails.payment_link}</a></div>` : ''}
+        `;
+    } else {
+        paymentInstructionsHTML = `
+            <div>Settlement Mode: <b>UPI Transfer</b></div>
+            <div>UPI ID / Number: <b>${pDetails.upi_id || '8310311290'}</b></div>
+            ${pDetails.payment_link ? `<div style="margin-top: 6px;"><b>Gateway Link:</b> <a href="${pDetails.payment_link}" target="_blank" style="color: #2563eb; text-decoration: underline;">${pDetails.payment_link}</a></div>` : ''}
+        `;
+    }
     
     const div = document.createElement('div');
     div.className = 'print-template';
     
     let itemsHTML = "";
-    items.forEach((item, index) => {
+    (inv.invoice_items || []).forEach((item, index) => {
         itemsHTML += `
             <tr>
-                <td style="width: 8%; text-align: center;">${index + 1}</td>
-                <td><b>${item.description}</b></td>
-                <td style="width: 25%; text-align: right; font-weight: 600;">₹${item.amount.toLocaleString()}</td>
+                <td style="width: 8%; text-align: center; padding: 8px 10px; vertical-align: middle;">${index + 1}</td>
+                <td style="width: 45%; text-align: left; padding: 8px 10px; vertical-align: middle; word-wrap: break-word; white-space: normal;">
+                    <div style="font-weight: 700; color: #0f172a; word-wrap: break-word; white-space: normal;">${item.service_name}</div>
+                </td>
+                <td style="width: 12%; text-align: center; padding: 8px 10px; vertical-align: middle;">${item.quantity || 1}</td>
+                <td style="width: 20%; text-align: right; padding: 8px 10px; vertical-align: middle;">₹${(item.unit_price || 0).toLocaleString('en-IN')}</td>
+                <td style="width: 15%; text-align: right; font-weight: 600; padding: 8px 10px; vertical-align: middle;">₹${(item.total || 0).toLocaleString('en-IN')}</td>
             </tr>
         `;
     });
+
+    const statusMap = {
+        'Draft': { bg: '#e2e8f0', color: '#475569', label: 'Draft' },
+        'Pending': { bg: '#fef3c7', color: '#b45309', label: 'Pending Payment' },
+        'Paid': { bg: '#d1fae5', color: '#065f46', label: 'Fully Paid' },
+        'Overdue': { bg: '#fee2e2', color: '#991b1b', label: 'Overdue Dues' }
+    };
+    const currentStatus = statusMap[inv.status || 'Pending'] || statusMap['Pending'];
     
     div.innerHTML = `
         <div class="print-header">
             <div class="print-brand">
-                <div class="print-brand-title">PRADRAKSHA GROUPS</div>
-                <div class="print-brand-tagline">Corporate Invoice</div>
+                <div class="print-brand-title" style="color: #1e3a8a; font-weight: 800; font-size: 20px;">${inv.company_details?.company_name || 'PRADRAKSHA GROUPS'}</div>
+                <div class="print-brand-tagline" style="letter-spacing: 1px;">${inv.company_details?.website || 'www.pradraksha.com'}</div>
             </div>
-            <div class="print-doc-meta">
-                <div class="print-doc-title">INVOICE</div>
-                <div class="print-meta-grid">
-                    <span class="print-meta-label">Invoice No:</span><span class="print-meta-val">${id}</span>
-                    <span class="print-meta-label">Date:</span><span class="print-meta-val">${formatDateString(date)}</span>
-                    <span class="print-meta-label">Due Date:</span><span class="print-meta-val">${dueDate ? formatDateString(dueDate) : 'On Receipt'}</span>
+            <div class="print-doc-meta" style="text-align: right;">
+                <div style="display: inline-block; background: ${currentStatus.bg}; color: ${currentStatus.color}; padding: 0.25rem 0.75rem; border-radius: var(--radius-sm); font-size: 10px; font-weight: 700; text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 0.5px;">
+                    ${currentStatus.label}
                 </div>
+                <div class="print-doc-title" style="font-size: 22px; font-weight: 800; color: #0f172a; margin-top: 0.25rem;">INVOICE</div>
+                <table style="display: inline-table; width: 240px; font-size: 10.5px; margin-top: 0.4rem; border-collapse: collapse; border: none; text-align: right;">
+                    <tr>
+                        <td style="width: 100px; text-align: left; color: #64748b; font-weight: 600; padding: 2px 0; border: none;">Invoice Ref:</td>
+                        <td style="width: 140px; text-align: right; font-weight: 700; color: #0f172a; padding: 2px 0; border: none;">${inv.invoice_number}</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 100px; text-align: left; color: #64748b; font-weight: 600; padding: 2px 0; border: none;">Issued Date:</td>
+                        <td style="width: 140px; text-align: right; font-weight: 700; color: #334155; padding: 2px 0; border: none;">${formatDateString(inv.invoice_date)}</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 100px; text-align: left; color: #64748b; font-weight: 600; padding: 2px 0; border: none;">Due Date:</td>
+                        <td style="width: 140px; text-align: right; font-weight: 700; color: ${inv.status === 'Overdue' ? '#b91c1c' : '#334155'}; padding: 2px 0; border: none;">${inv.due_date ? formatDateString(inv.due_date) : 'On Receipt'}</td>
+                    </tr>
+                </table>
             </div>
         </div>
 
-        <div class="print-addresses">
+        <div class="print-addresses" style="font-size: 11px; margin-bottom: 20px; gap: 30px;">
             <div>
-                <div class="print-address-title">From Billing Entity</div>
-                <div class="print-address-name">Pradraksha Groups</div>
-                <div>Pradraksha Towers, HSR Layout, Sector 4</div>
-                <div>Bangalore, Karnataka - 560102</div>
-                <div>finance@pradraksha.com</div>
+                <div class="print-address-title" style="font-weight: 700; border-bottom: 1.5px solid #cbd5e1; padding-bottom: 2px;">Billing From</div>
+                <div class="print-address-name" style="font-weight: 700; font-size: 12px; margin-top: 4px;">${inv.company_details?.company_name || 'Pradraksha Groups'}</div>
+                <div style="color: #475569;">${inv.company_details?.address || ''}</div>
+                <div style="color: #475569;">Email: ${inv.company_details?.email || ''} | Phone: ${inv.company_details?.phone || ''}</div>
             </div>
             <div>
-                <div class="print-address-title">Bill To (Client)</div>
-                <div class="print-address-name">${client.business}</div>
-                <div>Attn: ${client.name}</div>
-                <div>${client.address}</div>
-                <div>${client.email} | ${client.phone}</div>
+                <div class="print-address-title" style="font-weight: 700; border-bottom: 1.5px solid #cbd5e1; padding-bottom: 2px;">Invoiced To (Client)</div>
+                <div class="print-address-name" style="font-weight: 700; font-size: 12px; margin-top: 4px;">${inv.client_details?.business_name || 'Corporate Client'}</div>
+                <div style="color: #475569;">Attn: ${inv.client_details?.client_name || ''}</div>
+                <div style="color: #475569;">${inv.client_details?.address || ''}</div>
+                <div style="color: #475569;">Email: ${inv.client_details?.email || ''} | Phone: ${inv.client_details?.phone || ''}</div>
             </div>
         </div>
 
-        <table class="print-table">
+        ${inv.project_details?.project_name ? `
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: var(--radius-sm); padding: 0.75rem 1rem; margin-bottom: 1.5rem; font-size: 11px;">
+            <div style="font-weight: 700; color: #1e3a8a; text-transform: uppercase; font-size: 9px; letter-spacing: 0.5px; margin-bottom: 0.2rem;">Associated Project details</div>
+            <div><b>Project Name:</b> ${inv.project_details.project_name} (${inv.project_details.project_type})</div>
+            ${inv.project_details.description ? `<div style="color: #475569; margin-top: 0.2rem;"><b>Description:</b> ${inv.project_details.description}</div>` : ''}
+        </div>
+        ` : ''}
+
+        <table class="print-table" style="font-size: 11px; margin-bottom: 20px; table-layout: fixed; width: 100%;">
             <thead>
                 <tr>
-                    <th style="text-align: center;">#</th>
-                    <th style="text-align: left;">Product/Service Billing Description</th>
-                    <th style="text-align: right;">Amount (INR)</th>
+                    <th style="width: 8%; text-align: center; padding: 8px 10px;">#</th>
+                    <th style="width: 45%; text-align: left; padding: 8px 10px;">Product/Service Billing Description</th>
+                    <th style="width: 12%; text-align: center; padding: 8px 10px;">Qty</th>
+                    <th style="width: 20%; text-align: right; padding: 8px 10px;">Unit Rate</th>
+                    <th style="width: 15%; text-align: right; padding: 8px 10px;">Amount (INR)</th>
                 </tr>
             </thead>
             <tbody>
@@ -1431,36 +2191,62 @@ function assembleInvoiceHTML(id, client, date, dueDate, items, paid, notes) {
             </tbody>
         </table>
 
-        <div class="print-financial-summary">
-            <div class="print-payment-instructions">
-                <div class="print-instructions-title">Payment Coordinates</div>
-                <div>UPI ID: <b>pay@pradraksha</b></div>
-                <div>Bank Account: <b>HDFC Corporate A/c - 502000881122</b></div>
-                <div>IFSC Code: <b>HDFC0000123</b></div>
-                <div style="margin-top: 8px; font-style: italic;">${notes || ''}</div>
+        <div class="print-financial-summary" style="margin-top: 15px; font-size: 11px; display: table; width: 100%; border-spacing: 20px 0;">
+            <div class="print-payment-instructions" style="display: table-cell; width: 55%; vertical-align: top; padding-right: 15px; box-sizing: border-box;">
+                <div class="print-instructions-title" style="font-weight: 700; color: #1e3a8a;">Settlement Details</div>
+                ${paymentInstructionsHTML}
+                
+                ${inv.notes ? `
+                <div style="margin-top: 12px; background: #fffbeb; border: 1px solid #fde68a; border-radius: var(--radius-sm); padding: 8px 12px; color: #b45309; font-size: 10.5px; font-weight: 500; display: block; width: 100%; box-sizing: border-box; line-height: 1.4;">
+                    <b style="color: #b45309; text-transform: uppercase; font-size: 9px; letter-spacing: 0.5px; display: block; margin-bottom: 2px;">Remarks & Directives:</b>
+                    <span>${inv.notes}</span>
+                </div>
+                ` : ''}
             </div>
-            <div class="print-totals">
-                <span class="print-total-label">Subtotal:</span>
-                <span class="print-total-val">₹${subtotal.toLocaleString()}</span>
-                
-                <span class="print-total-label">Gross Total:</span>
-                <span class="print-total-val" style="font-weight: 600;">₹${grandTotal.toLocaleString()}</span>
-                
-                <span class="print-total-label">Deducted / Settled:</span>
-                <span class="print-total-val" style="color: var(--success); font-weight:600;">₹${paid.toLocaleString()}</span>
-                
-                <span class="print-total-label print-total-grand" style="border-top: 1.5px solid #cbd5e1; padding-top: 8px;">Net Due Amount:</span>
-                <span class="print-total-val print-total-grand" style="border-top: 1.5px solid #cbd5e1; padding-top: 8px; font-weight:800; color:${balance > 0 ? '#b45309' : '#059669'}">₹${balance.toLocaleString()}</span>
+            <div class="print-totals" style="display: table-cell; width: 40%; vertical-align: top; padding-left: 15px;">
+                <table style="width: 100%; border-collapse: collapse; margin: 0; padding: 0; line-height: 1.55; border: none;">
+                    <tr>
+                        <td style="text-align: left; padding: 4px 0; color: #64748b; font-size: 11px; border: none; font-weight: 500;">Subtotal:</td>
+                        <td style="text-align: right; padding: 4px 0; font-weight: 600; color: #334155; font-size: 11px; border: none;">₹${subtotal.toLocaleString('en-IN')}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left; padding: 4px 0; color: #64748b; font-size: 11px; border: none; font-weight: 500;">Discount Applied:</td>
+                        <td style="text-align: right; padding: 4px 0; font-weight: 600; color: #b91c1c; font-size: 11px; border: none;">- ₹${discount.toLocaleString('en-IN')}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left; padding: 4px 0; color: #64748b; font-size: 11px; border: none; font-weight: 500;">GST/Tax Amount (${taxPercent}%):</td>
+                        <td style="text-align: right; padding: 4px 0; font-weight: 600; color: #334155; font-size: 11px; border: none;">+ ₹${taxAmount.toLocaleString('en-IN')}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left; padding: 6px 0 4px 0; font-weight: 700; color: #1e3a8a; font-size: 11px; border-top: 1px solid #cbd5e1; border-bottom: none;">Grand Total:</td>
+                        <td style="text-align: right; padding: 6px 0 4px 0; font-weight: 700; color: #1e3a8a; font-size: 11px; border-top: 1px solid #cbd5e1; border-bottom: none;">₹${grandTotal.toLocaleString('en-IN')}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left; padding: 4px 0; color: #64748b; font-size: 11px; border: none; font-weight: 500;">Advance / Deductions:</td>
+                        <td style="text-align: right; padding: 4px 0; font-weight: 600; color: #059669; font-size: 11px; border: none;">₹${paidVal.toLocaleString('en-IN')}</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left; padding: 8px 0 4px 0; font-size: 14px; font-weight: 800; color: #1e3a8a; border-top: 1.8px solid #cbd5e1; border-bottom: none;">Balance Net Due:</td>
+                        <td style="text-align: right; padding: 8px 0 4px 0; font-size: 14px; font-weight: 800; color: ${balance > 0 ? '#b45309' : '#059669'}; border-top: 1.8px solid #cbd5e1; border-bottom: none;">₹${balance.toLocaleString('en-IN')}</td>
+                    </tr>
+                </table>
             </div>
         </div>
 
-        <div class="print-agreement-signatures" style="margin-top: 50px;">
+        ${inv.terms_conditions ? `
+        <div style="margin-top: 25px; border-top: 1.5px solid #cbd5e1; padding-top: 10px; font-size: 9.5px; color: #64748b; line-height: 1.5;">
+            <div style="font-weight: 700; color: #475569; text-transform: uppercase; font-size: 8.5px; margin-bottom: 0.25rem;">Terms & Conditions</div>
+            <div style="white-space: pre-wrap;">${inv.terms_conditions}</div>
+        </div>
+        ` : ''}
+
+        <div class="print-agreement-signatures" style="margin-top: 35px; page-break-inside: avoid; gap: 40px;">
             <div class="print-sig-box" style="border: none;">
             </div>
-            <div class="print-sig-box">
-                <div class="print-sig-title">For Pradraksha Groups</div>
-                <div style="height: 35px;"></div>
-                <div>Authorized Signatory (Accounts Department)</div>
+            <div class="print-sig-box" style="border-top: 1px dashed #cbd5e1; padding-top: 6px; font-size:10px;">
+                <div class="print-sig-title" style="font-size: 8.5px; color: #475569;">For ${inv.company_details?.company_name || 'PRADRAKSHA GROUPS'}</div>
+                <div style="height: 25px;"></div>
+                <div>Authorized Signatory (Finance Dept)</div>
             </div>
         </div>
     `;
@@ -1468,16 +2254,15 @@ function assembleInvoiceHTML(id, client, date, dueDate, items, paid, notes) {
 }
 
 // PDF Export Helper to render standard A4 desktop sheets off-screen
-function exportPaperElement(element, filename) {
+function exportPaperElement(element, filename, forceSinglePage = false) {
     if (!element) return;
     
     // Create a hidden wrapper container to hold the paper offscreen without layout offsets
     const wrapper = document.createElement('div');
-    wrapper.style.position = 'fixed';
-    wrapper.style.left = '0';
+    wrapper.style.position = 'absolute';
+    wrapper.style.left = '-9999px';
     wrapper.style.top = '0';
-    wrapper.style.width = '0';
-    wrapper.style.height = '0';
+    wrapper.style.width = '794px';
     wrapper.style.overflow = 'hidden';
     wrapper.style.zIndex = '-9999';
     document.body.appendChild(wrapper);
@@ -1489,18 +2274,26 @@ function exportPaperElement(element, filename) {
     // Style as a standard A4 page (relative positioning to avoid html2canvas absolute/fixed bugs)
     paper.style.position = 'relative';
     paper.style.width = '794px';
+    if (forceSinglePage) {
+        paper.style.height = '1122px';
+        paper.style.overflow = 'hidden';
+    } else {
+        paper.style.minHeight = '1122px';
+    }
     paper.style.background = '#ffffff';
     paper.style.padding = '40px';
     paper.style.boxSizing = 'border-box';
     
-    // Enforce high contrast text colors inside pdf
+    // Enforce high contrast text colors inside pdf, respecting custom inline styles
     const allText = paper.querySelectorAll('*');
     allText.forEach(el => {
-        el.style.color = '#1e293b';
+        if (!el.style.color) {
+            el.style.color = '#1e293b';
+        }
     });
     
     const opt = {
-        margin:       10,
+        margin:       0, // Use 0 margin to prevent page breaking and scaling issues
         filename:     filename,
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { scale: 2, useCORS: true, scrollX: 0, scrollY: 0 },
@@ -1531,28 +2324,28 @@ function triggerDocumentDownload(type, refId) {
         if (inv) {
             const client = appState.clients.find(c => c.id === inv.clientId);
             if (client) {
-                paper = assembleInvoiceHTML(inv.id, client, inv.date, inv.dueDate, inv.items, inv.paid, inv.notes);
+                paper = assembleInvoiceHTML(inv, client);
                 filename = `Invoice_${refId}_${client.business.replace(/\s+/g, '_')}.pdf`;
             }
         }
     }
     
     if (paper && filename) {
-        exportPaperElement(paper, filename);
+        exportPaperElement(paper, filename, type === 'invoice');
     }
 }
-window.triggerDocumentDownload = triggerDocumentDownload; // Bind global
+window.triggerDocumentDownload = triggerDocumentDownload; // Bind globalChannels
 
 // PDF Export triggers for Form Pages
 
 document.getElementById('btn-agree-export').onclick = () => {
     if (!currentAgreeDraftElement) return;
-    exportPaperElement(currentAgreeDraftElement, `Agreement_${currentAgreeClientName}.pdf`);
+    exportPaperElement(currentAgreeDraftElement, `Agreement_${currentAgreeClientName}.pdf`, false);
 };
 
 document.getElementById('btn-invoice-export').onclick = () => {
     if (!currentInvoiceDraftElement) return;
-    exportPaperElement(currentInvoiceDraftElement, `Invoice_${currentInvoiceNumber}_${currentInvoiceClientName}.pdf`);
+    exportPaperElement(currentInvoiceDraftElement, `Invoice_${currentInvoiceNumber}_${currentInvoiceClientName}.pdf`, true);
 };
 
 // Form Resets
@@ -1605,8 +2398,8 @@ document.getElementById('btn-agree-reset').onclick = () => {
 document.getElementById('btn-invoice-reset').onclick = () => {
     document.getElementById('invoice-form').reset();
     document.getElementById('invoice-items-tbody').innerHTML = '';
-    invoiceTable.addRow();
-    
+    invoiceTable.addRow("", 1, "");
+    calculateInvoiceFormTotals();
     initInvoiceFormDefaults();
     
     document.getElementById('invoice-pdf-viewport').innerHTML = `
@@ -1619,11 +2412,23 @@ document.getElementById('btn-invoice-reset').onclick = () => {
     lucide.createIcons();
 };
 
+function togglePaymentModeFields() {
+    const modeSelect = document.getElementById('invoice-pay-mode');
+    if (!modeSelect) return;
+    const mode = modeSelect.value;
+    const upiFields = document.getElementById('invoice-upi-fields');
+    if (upiFields) {
+        upiFields.style.display = mode === 'UPI' ? 'flex' : 'none';
+    }
+}
+window.togglePaymentModeFields = togglePaymentModeFields;
+
 function initInvoiceFormDefaults() {
     document.getElementById('invoice-date').value = new Date().toISOString().substring(0, 10);
     const baseNum = appState.invoices.length + 1;
     const padded = String(baseNum).padStart(3, '0');
     document.getElementById('invoice-num').value = `PR-2026-${padded}`;
+    togglePaymentModeFields();
 }
 
 // --- 9. QR CODE & TENT CARD RENDER ENGINE ---
@@ -2021,6 +2826,59 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     
     initInvoiceFormDefaults();
+    
+    // Live calculations event listeners for invoice discount, tax, and paid inputs
+    const discountInput = document.getElementById('invoice-discount');
+    const taxInput = document.getElementById('invoice-tax');
+    const paidInput = document.getElementById('invoice-paid');
+    
+    if (discountInput) discountInput.addEventListener('input', calculateInvoiceFormTotals);
+    if (taxInput) taxInput.addEventListener('input', calculateInvoiceFormTotals);
+    if (paidInput) paidInput.addEventListener('input', calculateInvoiceFormTotals);
+    
+    // Enforce permanent prefix for Settlement Reference Notes
+    const notesTextarea = document.getElementById('invoice-notes');
+    if (notesTextarea) {
+        const prefix = "to be paid with in date: ";
+        notesTextarea.addEventListener('keydown', function(e) {
+            const selectionStart = notesTextarea.selectionStart;
+            const selectionEnd = notesTextarea.selectionEnd;
+            if (e.key === 'Backspace' && selectionStart <= prefix.length && selectionEnd <= prefix.length) {
+                e.preventDefault();
+            }
+            if (e.key === 'Delete' && selectionStart < prefix.length) {
+                e.preventDefault();
+            }
+        });
+        
+        notesTextarea.addEventListener('input', function() {
+            if (!notesTextarea.value.startsWith(prefix)) {
+                notesTextarea.value = prefix;
+            }
+        });
+
+        const datetimePicker = document.getElementById('invoice-notes-datetime');
+        if (datetimePicker) {
+            datetimePicker.addEventListener('input', function() {
+                const val = datetimePicker.value;
+                if (val) {
+                    const dateObj = new Date(val);
+                    const formatted = dateObj.toLocaleString('en-IN', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                    });
+                    notesTextarea.value = prefix + formatted;
+                } else {
+                    notesTextarea.value = prefix;
+                }
+            });
+        }
+    }
+    
     renderQRCodeWidget();
     initThemeToggle();
     lucide.createIcons();
