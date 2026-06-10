@@ -2092,8 +2092,7 @@ function assembleInvoiceHTML(id, client, date, dueDate, items, paid, notes) {
     } else {
         paymentInstructionsHTML = `
             <div>Settlement Mode: <b>UPI Transfer</b></div>
-            <div>UPI ID / Number: <b>${pDetails.upi_id || '8310311290'}</b></div>
-            ${pDetails.payment_link ? `<div style="margin-top: 6px;"><b>Gateway Link:</b> <a href="${pDetails.payment_link}" target="_blank" style="color: #2563eb; text-decoration: underline;">${pDetails.payment_link}</a></div>` : ''}
+            <div>UPI Number: <b>${pDetails.upi_id || '8310311290'}</b></div>
         `;
     }
     
