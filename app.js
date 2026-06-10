@@ -1951,8 +1951,7 @@ document.getElementById('invoice-form').addEventListener('submit', function(e) {
         grand_total,
         payment_details: {
             payment_mode: document.getElementById('invoice-pay-mode').value,
-            upi_id: document.getElementById('invoice-pay-upi').value,
-            payment_link: document.getElementById('invoice-pay-link').value
+            upi_id: document.getElementById('invoice-pay-upi') ? document.getElementById('invoice-pay-upi').value : ''
         },
         terms_conditions,
         advance_received,
