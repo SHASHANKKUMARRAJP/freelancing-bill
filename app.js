@@ -2256,8 +2256,26 @@ function assembleInvoiceHTML(id, client, date, dueDate, items, paid, notes) {
 // PDF Export Helper to render standard A4 desktop sheets off-screen
 function exportPaperElement(element, filename, forceSinglePage = false) {
     if (!element) return;
-    
-    // Create a hidden wrapper container to hold the paper offscreen without layout offsets
+
+    // Simple inline toast for PDF status messages
+    function _pdfToast(msg, type) {
+        const t = document.createElement('div');
+        t.textContent = msg;
+        const colors = { info: '#3b82f6', success: '#10b981', error: '#ef4444' };
+        t.style.cssText = `
+            position:fixed; bottom:100px; left:50%; transform:translateX(-50%);
+            background:${colors[type]||colors.info}; color:#fff;
+            padding:0.75rem 1.25rem; border-radius:10px; font-size:0.9rem;
+            font-weight:600; z-index:99999; box-shadow:0 8px 24px rgba(0,0,0,0.35);
+            max-width:90vw; text-align:center; pointer-events:none;
+        `;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 3500);
+    }
+
+    _pdfToast('Preparing PDF… please wait', 'info');
+
+    // Create a hidden wrapper container to hold the paper offscreen
     const wrapper = document.createElement('div');
     wrapper.style.position = 'absolute';
     wrapper.style.left = '-9999px';
@@ -2266,12 +2284,12 @@ function exportPaperElement(element, filename, forceSinglePage = false) {
     wrapper.style.overflow = 'hidden';
     wrapper.style.zIndex = '-9999';
     document.body.appendChild(wrapper);
-    
+
     // Clone the element so we do not distort the visible preview
     const paper = element.cloneNode(true);
     wrapper.appendChild(paper);
-    
-    // Style as a standard A4 page (relative positioning to avoid html2canvas absolute/fixed bugs)
+
+    // Style as a standard A4 page
     paper.style.position = 'relative';
     paper.style.width = '794px';
     if (forceSinglePage) {
@@ -2283,26 +2301,62 @@ function exportPaperElement(element, filename, forceSinglePage = false) {
     paper.style.background = '#ffffff';
     paper.style.padding = '40px';
     paper.style.boxSizing = 'border-box';
-    
-    // Enforce high contrast text colors inside pdf, respecting custom inline styles
-    const allText = paper.querySelectorAll('*');
-    allText.forEach(el => {
-        if (!el.style.color) {
-            el.style.color = '#1e293b';
-        }
+
+    // Enforce high contrast text colors inside pdf
+    paper.querySelectorAll('*').forEach(el => {
+        if (!el.style.color) el.style.color = '#1e293b';
     });
-    
+
     const opt = {
-        margin:       0, // Use 0 margin to prevent page breaking and scaling issues
-        filename:     filename,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, scrollX: 0, scrollY: 0 },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        margin:      0,
+        filename:    filename,
+        image:       { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, scrollX: 0, scrollY: 0, logging: false },
+        jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
-    
-    html2pdf().set(opt).from(paper).save().then(() => {
-        wrapper.remove();
-    });
+
+    const isMobile = /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(navigator.userAgent);
+
+    if (isMobile) {
+        // On mobile: generate blob then open in new tab so the browser
+        // shows its native "Download / Share / Save to Files" sheet
+        html2pdf().set(opt).from(paper).outputPdf('blob').then(blob => {
+            wrapper.remove();
+            const blobUrl = URL.createObjectURL(blob);
+
+            // Try anchor download first
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = filename;
+            a.target = '_blank';
+            a.rel = 'noopener';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            // Also open in new tab after short delay (iOS Safari fallback)
+            setTimeout(() => {
+                window.open(blobUrl, '_blank');
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 15000);
+            }, 400);
+
+            _pdfToast('PDF ready! Tap "Save" or check your Downloads.', 'success');
+        }).catch(err => {
+            wrapper.remove();
+            console.error('PDF generation failed:', err);
+            _pdfToast('PDF generation failed. Please try again.', 'error');
+        });
+    } else {
+        // Desktop: standard save behavior
+        html2pdf().set(opt).from(paper).save().then(() => {
+            wrapper.remove();
+            _pdfToast('PDF downloaded successfully!', 'success');
+        }).catch(err => {
+            wrapper.remove();
+            console.error('PDF generation failed:', err);
+            _pdfToast('PDF generation failed. Please try again.', 'error');
+        });
+    }
 }
 
 // Global Hook to generate document and run PDF downloader
