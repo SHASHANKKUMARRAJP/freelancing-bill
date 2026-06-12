@@ -14,7 +14,7 @@
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-    <link rel="stylesheet" href="styles.css?v=4">
+    <link rel="stylesheet" href="styles.css?v=6">
 
 
     <!-- Lucide Icons -->
@@ -246,7 +246,7 @@
                         <i data-lucide="terminal" style="width: 14px; height: 14px;"></i>
                         Quick Actions
                     </h3>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1rem;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem;">
                         <button class="btn btn-secondary flex-center btn-quick-action" onclick="quickNavigate('clients-add')" style="padding: 1.25rem 1rem; flex-direction: column; gap: 0.5rem; text-align: center; height: auto;">
                             <div class="action-icon-wrap" style="width: 42px; height: 42px; border-radius: var(--radius-md); background: rgba(96, 165, 250, 0.1); display: flex; align-items: center; justify-content: center; transition: all var(--transition-fast);"><i data-lucide="user-plus" style="width: 20px; height: 20px; color: #60a5fa;"></i></div>
                             <span style="font-size: 0.85rem; font-weight: 700; margin-top: 0.25rem;">Add Partner</span>
@@ -263,6 +263,10 @@
                         <button class="btn btn-secondary flex-center btn-quick-action" onclick="quickNavigate('payments-log')" style="padding: 1.25rem 1rem; flex-direction: column; gap: 0.5rem; text-align: center; height: auto;">
                             <div class="action-icon-wrap" style="width: 42px; height: 42px; border-radius: var(--radius-md); background: rgba(52, 211, 153, 0.1); display: flex; align-items: center; justify-content: center; transition: all var(--transition-fast);"><i data-lucide="wallet" style="width: 20px; height: 20px; color: #34d399;"></i></div>
                             <span style="font-size: 0.85rem; font-weight: 700; margin-top: 0.25rem;">Record Payout</span>
+                        </button>
+                        <button class="btn btn-secondary flex-center btn-quick-action" onclick="quickNavigate('qr-generator')" style="padding: 1.25rem 1rem; flex-direction: column; gap: 0.5rem; text-align: center; height: auto;">
+                            <div class="action-icon-wrap" style="width: 42px; height: 42px; border-radius: var(--radius-md); background: rgba(6, 182, 212, 0.1); display: flex; align-items: center; justify-content: center; transition: all var(--transition-fast);"><i data-lucide="qr-code" style="width: 20px; height: 20px; color: #06b6d4;"></i></div>
+                            <span style="font-size: 0.85rem; font-weight: 700; margin-top: 0.25rem;">Menu QR Tool</span>
                         </button>
                     </div>
                 </div>
@@ -1286,7 +1290,6 @@
         </div>
     </div>
 
-    <!-- MOBILE BOTTOM NAVIGATION BAR -->
     <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
         <a href="#dashboard" class="mobile-nav-item active" id="mob-nav-dashboard">
             <i data-lucide="layout-dashboard"></i>
@@ -1307,6 +1310,10 @@
         <a href="#agreements" class="mobile-nav-item" id="mob-nav-agreements">
             <i data-lucide="file-text"></i>
             <span>MSA</span>
+        </a>
+        <a href="#qr-generator" class="mobile-nav-item" id="mob-nav-qr-generator">
+            <i data-lucide="qr-code"></i>
+            <span>QR Tool</span>
         </a>
     </nav>
 
